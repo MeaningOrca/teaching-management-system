@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'script.js' %}"></script>
+</head>
+<body>
+    <div id="login-page" class="page">
+        <div class="login-container">
+            <h1>Teaching Management System</h1>
+            <form id="login-form" method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Login</button>
+            </form>
+
+            <!-- Simulate Login Buttons -->
+<!--            <button onclick="simulateLogin('student')">Simulate Student Login</button>-->
+<!--            <button onclick="simulateLogin('teacher')">Simulate Teacher Login</button>-->
+<!--            <button onclick="simulateLogin('admin')">Simulate Admin Login</button>-->
+<!--            <button onclick="simulateLogin('counselor')">Simulate Counselor Login</button>-->
+        </div>
+    </div>
+</body>
+</html>

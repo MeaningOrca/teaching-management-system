@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teaching Management System</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'script.js' %}"></script>
+</head>
+<body>
+    <!-- Student Page -->
+    <div id="student-page" class="page" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Welcome, <span id="user-name">Student</span></h2>
+            <button class="menu-button" onclick="window.location.href='{% url 'logout' %}'">Logout</button>
+        </div>
+        <nav>
+            <button onclick="showSection('student-select-courses')">Course Selection</button>
+            <button onclick="showSection('student-cancel-courses')">Cancel Course</button>
+            <button onclick="showSection('student-view-grades')">Check Status & Analyze Grades</button>
+	    <button onclick="showSection('student-view-reports')">Check Reports</button>
+        </nav>
+        <section id="student-select-courses" class="section" style="display: none;">
+            <h3>Course Choosing</h3>
+            <form>
+                <label for="course-selection">Choose a course:</label>
+                <select id="course-selection">
+                    <option value="">--Select a course--</option>
+                </select>
+                <button type="button">Add Course</button>
+            </form>
+        </section>
+        <section id="student-cancel-courses" class="section" style="display: none;">
+            <h3>Cancel Course</h3>
+            <form>
+                <label for="cancel-course-selection">Select a course to cancel:</label>
+                <select id="cancel-course-selection">
+                    <option value="">--Select a course--</option>
+                </select>
+                <button type="button">Cancel Course</button>
+            </form>
+        </section>
+        <section id="student-view-grades" class="section" style="display: none;">
+            <h3>Course Status & Grade Analysis</h3>
+            <ul id="student-courses-list"></ul>
+            <h4>Grade Analysis</h4>
+            <canvas id="student-grade-chart"></canvas>
+        </section>
+        <section id="student-view-reports" class="section" style="display: none;">
+            <h3>Reports</h3>
+            <ul id="student-report-list"></ul>
+        </section>
+    </div>
+
+    <!-- Teacher Page -->
+    <div id="teacher-page" class="page" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Welcome, <span id="teacher-name">Teacher</span></h2>
+            <button class="menu-button" onclick="window.location.href='{% url 'logout' %}'">Logout</button>
+        </div>
+        <nav>
+            <button onclick="showSection('teacher-view-courses')">Check Courses</button>
+            <button onclick="showSection('teacher-manage-grades')">Manage Scores</button>
+            <button onclick="showSection('teacher-analyze-grades')">Statistics Analysis</button>
+            <button onclick="showSection('teacher-add-reports')">Add Report</button>
+            <button onclick="showSection('teacher-contact-info')">Update Contact Info</button>
+        </nav>
+        <section id="teacher-view-courses" class="section" style="display: none;">
+            <h3>Check Courses</h3>
+            <ul id="teacher-courses-list"></ul>
+        </section>
+        <section id="teacher-manage-grades" class="section" style="display: none;">
+            <h3>Manage Scores</h3>
+            <form>
+                <label for="manage-grade-course">Select Course:</label>
+                <select id="manage-grade-course">
+                    <option value="">--Select a course--</option>
+                </select>
+                <label for="student-id-name">Student ID/Name:</label>
+                <input type="text" id="student-id-name">
+                <label for="student-grade">Enter Grade:</label>
+                <input type="text" id="student-grade">
+                <button type="button">Submit Grade</button>
+            </form>
+        </section>
+        <section id="teacher-add-reports" class="section" style="display: none;">
+            <h3>Add Report</h3>
+            <form>
+                <label for="report-course">Select Course:</label>
+                <select id="report-course">
+                    <option value="">--Select a course--</option>
+                </select>
+                <label for="report-student-id">Student ID/Name:</label>
+                <input type="text" id="report-student-id">
+                <label for="teacher-report">Report:</label>
+                <textarea id="teacher-report" rows="5"></textarea>
+                <button type="button">Submit Report</button>
+            </form>
+        </section>
+        <section id="teacher-analyze-grades" class="section" style="display: none;">
+            <h3>Statistics Analysis</h3>
+            <canvas id="teacher-statistics-chart"></canvas>
+        </section>
+        <section id="teacher-contact-info" class="section" style="display: none;">
+            <h3>Update Contact Information</h3>
+            <form>
+                <label for="teacher-email">Email:</label>
+                <input type="email" id="teacher-email">
+                <label for="teacher-phone">Phone Number:</label>
+                <input type="tel" id="teacher-phone">
+                <button type="button">Update</button>
+            </form>
+        </section>
+    </div>
+
+    <!-- Admin Page -->
+    <div id="admin-page" class="page" style="display: none;">
+    <div class="dashboard-header">
+        <h2>Welcome, <span id="admin-name">Admin</span></h2>
+        <button class="menu-button" onclick="window.location.href='{% url 'logout' %}'">Logout</button>
+    </div>
+    <nav>
+        <button onclick="showSection('admin-manage-users')">Manage Users</button>
+        <button onclick="showSection('admin-manage-courses')">Manage Courses</button>
+    </nav>
+
+    <!-- Manage Users Section -->
+    <section id="admin-manage-users" class="section" style="display: none;">
+        <h3>Manage Users</h3>
+        <button onclick="showUserForm('add')">Add User</button>
+        <button onclick="showUserForm('modify')">Modify User</button>
+        <button onclick="showUserForm('delete')">Delete User</button>
+
+        <div id="user-form-container" style="margin-top: 20px;">
+            <!-- Dynamic content for user management actions will appear here -->
+        </div>
+    </section>
+
+    <!-- Manage Courses Section -->
+    <section id="admin-manage-courses" class="section" style="display: none;">
+        <h3>Manage Courses</h3>
+        <button onclick="showCourseForm('add')">Add Course</button>
+        <button onclick="showCourseForm('modify')">Modify Course</button>
+        <button onclick="showCourseForm('delete')">Delete Course</button>
+
+        <div id="course-form-container" style="margin-top: 20px;">
+            <!-- Dynamic content for course management actions will appear here -->
+        </div>
+    </section>
+</div>
+
+    <!-- Counselor Page -->
+    <div id="counselor-page" class="page" style="display: none;">
+        <div class="dashboard-header">
+            <h2>Welcome, <span id="counselor-name">Counselor</span></h2>
+            <button class="menu-button" onclick="window.location.href='{% url 'logout' %}'">Logout</button>
+        </div>
+        <nav>
+            <button onclick="showSection('counselor-view-students')">View Students</button>
+            <button onclick="showSection('counselor-analyze-performance')">Analyze Performance</button>
+            <button onclick="showSection('counselor-schedule-meetings')">Schedule Meetings</button>
+        </nav>
+        <section id="counselor-view-students" class="section" style="display: none;">
+            <h3>View Students</h3>
+            <ul id="counselor-students-list">
+                <!-- Dynamic content goes here -->
+            </ul>
+        </section>
+        <section id="counselor-analyze-performance" class="section" style="display: none;">
+            <h3>Analyze Student Performance</h3>
+            <label for="student-performance-id">Select Student:</label>
+            <select id="student-performance-id">
+                <option value="">--Select a student--</option>
+            </select>
+            <button type="button">View Analysis</button>
+            <canvas id="counselor-performance-chart"></canvas>
+        </section>
+        <section id="counselor-schedule-meetings" class="section" style="display: none;">
+            <h3>Schedule Meetings</h3>
+            <form>
+                <label for="meeting-student-id">Student ID/Name:</label>
+                <input type="text" id="meeting-student-id" required>
+                <label for="meeting-date">Date:</label>
+                <input type="date" id="meeting-date" required>
+                <label for="meeting-time">Time:</label>
+                <input type="time" id="meeting-time" required>
+                <button type="button">Schedule Meeting</button>
+            </form>
+        </section>
+    </div>
+
+    <script>
+        let role = '{{ role }}';
+
+        if (role === 'administrator') {
+            role = 'admin'
+        } else if (role === '') {
+            window.location.href = '/admin'
+        }
+        simulateLogin(role)
+    </script>
+</body>
+</html>
