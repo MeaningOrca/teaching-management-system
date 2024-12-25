@@ -7,7 +7,6 @@ function showSection(sectionId) {
     document.getElementById(sectionId).style.display = 'block';
 }
 
-
 // Logout function (simple demo, replace with actual functionality)
 function logout() {
     document.getElementById('student-page').style.display = 'none';
@@ -224,7 +223,6 @@ function fetchTeachers() {
             teacherSelect.innerHTML = data
                 .map(teacher => `<option value="${teacher.teacher_id}">${teacher.teacher_name}</option>`)
                 .join("");
-            console.log(data);
         })
         .catch(error => console.error("Error fetching teachers:", error));
 }
@@ -235,14 +233,17 @@ function submitUser(action) {
 
     data.type = userType;
 
-    let isValid = true; 
+    let isValid = true; // Validation flag
 
+    // Collect data based on user type
     if (userType === "student") {
-        data.id = document.getElementById("student-id").value;
-        data.name = document.getElementById("student-name").value;
-        data.gender = document.getElementById("student-gender").value;
+        data.id = document.getElementById("student-id")?.value?.trim();
+        data.name = document.getElementById("student-name")?.value?.trim();
+        data.gender = document.getElementById("student-gender")?.value;
+        data.class = document.getElementById("student-class")?.value?.trim();
+        data.major = document.getElementById("student-major")?.value;
 
-        const birthdateInput = document.getElementById("student-birthdate").value;
+        const birthdateInput = document.getElementById("student-birthdate")?.value;
         if (birthdateInput) {
             const formattedDate = formatDateToYYYYMMDD(birthdateInput);
             if (!formattedDate) {
@@ -252,50 +253,50 @@ function submitUser(action) {
                 data.birthdate = formattedDate;
             }
         }
-
-        data.class = document.getElementById("student-class").value;
-        data.major = document.getElementById("student-major").value; // Major from the select
     } else if (userType === "teacher") {
-        data.id = document.getElementById("teacher-id").value;
-        data.name = document.getElementById("teacher-name").value;
-        data.gender = document.getElementById("teacher-gender").value;
-        data.department = document.getElementById("teacher-department").value; // Department from the select
-        data.contact = document.getElementById("teacher-contact").value;
+        data.id = document.getElementById("teacher-id")?.value?.trim();
+        data.name = document.getElementById("teacher-name")?.value?.trim();
+        data.gender = document.getElementById("teacher-gender")?.value;
+        data.department = document.getElementById("teacher-department")?.value;
+        data.contact = document.getElementById("teacher-contact")?.value?.trim();
     } else if (userType === "admin") {
-        data.id = document.getElementById("admin-id").value;
-        data.name = document.getElementById("admin-name").value;
+        data.id = document.getElementById("admin-id")?.value?.trim();
+        data.name = document.getElementById("admin-name")?.value?.trim();
     } else if (userType === "counselor") {
-        data.id = document.getElementById("counselor-id").value;
-        data.name = document.getElementById("counselor-name").value;
-        data.course = document.getElementById("counselor-course").value; // Course from the select
+        data.id = document.getElementById("counselor-id")?.value?.trim();
+        data.name = document.getElementById("counselor-name")?.value?.trim();
+        data.course = document.getElementById("counselor-course")?.value;
+    } else {
+        alert("Invalid user type selected.");
+        return;
     }
 
-    // Validate that id and name are not empty and the ID is an integer
+    // Validate ID and Name
     if (!data.id || !data.name) {
         alert("Both ID and Name are required!");
-        isValid = false; // Set the flag to false if validation fails
+        isValid = false;
     }
 
-    // Validate that the ID is a valid integer
+    // Validate ID as an integer
     if (isNaN(data.id) || !Number.isInteger(parseFloat(data.id))) {
         alert("ID must be a valid integer!");
         isValid = false;
     }
 
     if (!isValid) {
-        return; // Stop function execution if validation fails
+        return; // Stop execution if validation fails
     }
 
-    console.log(data); // Log the collected data for debugging
+    console.log("Collected data:", data); // Debugging log
 
-    // Determine the API endpoint based on the action
+    // Determine API endpoint based on action
     const endpoint = action === "add" ? "/api/users/add" : "/api/users/modify";
 
-    // Submit the data to the server using the Fetch API
+    // Submit the data to the server
     fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
     })
         .then((response) => {
             if (!response.ok) {
@@ -373,60 +374,76 @@ function deleteCourse() {
         .catch(error => console.error("Error deleting course:", error));
 }
 
-function submitUser(action) {
-    const data = {}; // Collect user data dynamically
+function addUser() {
     const userType = document.getElementById("user-type").value;
 
-    data.type = userType;
-
-    if (userType === "student") {
-        data.id = document.getElementById("student-id").value;
-        data.name = document.getElementById("student-name").value;
-        data.gender = document.getElementById("student-gender").value;
-        data.birthdate = document.getElementById("student-birthdate").value;
-        data.class = document.getElementById("student-class").value;
-        data.major = document.getElementById("student-major").value;
-    } else if (userType === "teacher") {
-        data.id = document.getElementById("teacher-id").value;
-        data.name = document.getElementById("teacher-name").value;
-        data.gender = document.getElementById("teacher-gender").value;
-        data.department = document.getElementById("teacher-department").value;
-        data.phone = document.getElementById("teacher-phone").value;
-        data.email = document.getElementById("teacher-email").value;
-    } else if (userType === "admin") {
-        data.id = document.getElementById("admin-id").value;
-        data.name = document.getElementById("admin-name").value;
-    } else if (userType === "counselor") {
-        data.id = document.getElementById("counselor-id").value;
-        data.name = document.getElementById("counselor-name").value;
-        data.course = document.getElementById("counselor-course").value;
+    if (!userType) {
+        alert("Please select a user type.");
+        return;
     }
 
-    console.log(data); // Log the collected data for debugging
+    let userData = {};
 
-    // Determine the API endpoint based on the action
-    const endpoint = action === "add" ? "/api/users/add" : "/api/users/modify";
+    if (userType === "student") {
+        userData = {
+            type: "student",
+            id: document.getElementById("student-id").value,
+            name: document.getElementById("student-name").value,
+            gender: document.getElementById("student-gender").value,
+            birthdate: document.getElementById("student-birthdate").value,
+            class: document.getElementById("student-class").value,
+            major: document.getElementById("student-major").value
+        };
+    } else if (userType === "teacher") {
+        userData = {
+            type: "teacher",
+            id: document.getElementById("teacher-id").value,
+            name: document.getElementById("teacher-name").value,
+            gender: document.getElementById("teacher-gender").value,
+            department: document.getElementById("teacher-department").value,
+            phone: document.getElementById("teacher-phone").value,
+            email: document.getElementById("teacher-email").value
+        };
+    } else if (userType === "admin") {
+        userData = {
+            type: "admin",
+            id: document.getElementById("admin-id").value,
+            name: document.getElementById("admin-name").value
+        };
+    } else if (userType === "counselor") {
+        userData = {
+            type: "counselor",
+            id: document.getElementById("counselor-id").value,
+            name: document.getElementById("counselor-name").value,
+            course: document.getElementById("counselor-course").value
+        };
+    } else {
+        alert("Invalid user type selected.");
+        return;
+    }
 
-    // Submit the data to the server using the Fetch API
-    fetch(endpoint, {
+    // Validate collected data
+    if (!userData.id || !userData.name) {
+        alert("ID and Name are required fields.");
+        return;
+    }
+
+    // Submit data to server
+    fetch("/api/users/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
-        body: JSON.stringify(data)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData)
     })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(result => {
-            alert("User operation successful!");
-            console.log("Server response:", result);
+            if (result.success) {
+                alert("User added successfully!");
+                document.getElementById("user-form-container").innerHTML = ""; // Clear form
+            } else {
+                alert("Error: " + result.message);
+            }
         })
-        .catch(error => {
-            console.error("Error submitting user data:", error);
-            alert("Failed to perform the operation. Please try again.");
-        });
+        .catch(error => console.error("Error adding user:", error));
 }
 
 function addCourse() {
@@ -447,7 +464,7 @@ function addCourse() {
     // Submit course data to the server
     fetch("/api/courses/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(courseData)
     })
         .then(response => response.json())
