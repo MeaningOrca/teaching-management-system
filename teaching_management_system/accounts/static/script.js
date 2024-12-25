@@ -7,6 +7,26 @@ function showSection(sectionId) {
     document.getElementById(sectionId).style.display = 'block';
 }
 
+
+function loadCourses(elementID) {
+    fetch('/get-courses/')
+        .then(response => response.json())
+        .then(data => {
+            const selectElement = document.getElementById(elementID);
+            // Очистить предыдущие опции
+            selectElement.innerHTML = '<option value="">--Select a course--</option>';
+
+            // Добавить новые опции
+            data.courses.forEach(course => {
+                const option = document.createElement("option");
+                option.value = course.id;
+                option.textContent = course.name;
+                selectElement.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error loading courses:', error));
+}
+
 // Logout function (simple demo, replace with actual functionality)
 function logout() {
     document.getElementById('student-page').style.display = 'none';
@@ -19,6 +39,47 @@ function logout() {
 function getCSRFToken() {
     const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
     return csrfCookie ? csrfCookie.split('=')[1] : null;
+}
+
+async function searchUser() {
+    const baseUrl = "http://localhost:8000/api/users/search";
+    const params = {
+        user_id: document.getElementById("search-user-id").value,
+        user_type: "student" // TODO: 完成
+    };
+
+    // Create a URL object
+    const url = new URL(baseUrl);
+
+    // Append GET parameters
+    Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
+
+    try {
+        const response = await fetch(url.toString());
+        if (response.ok) {
+            const result = await response.json();
+            populateModifyUserFields(result);
+        } else {
+            const error = await response.json();
+            alert('Failed to find user: ' + error.message);
+        }
+    } catch (error) {
+        alert('Error connecting to server: ' + error.message);
+    }
+}
+
+function populateModifyUserFields(user) {
+    const modifyFields = document.getElementById("modify-user-fields");
+    modifyFields.innerHTML = `
+        <label for="modify-user-name">Name:</label>
+        <input type="text" id="modify-user-name" value="${user.data.name}">
+        <label for="modify-user-gender">Gender:</label>
+        <select id="modify-user-gender">
+            <option value="m" ${user.gender === "m" ? "selected" : ""}>Male</option>
+            <option value="f" ${user.gender === "f" ? "selected" : ""}>Female</option>
+        </select>
+        <!-- Add other fields as needed -->
+    `;
 }
 
 // Simulate user login process based on role
@@ -203,7 +264,15 @@ function showUserTypeFields() {
             <input type="text" id="counselor-id">
             <label for="counselor-name">Name:</label>
             <input type="text" id="counselor-name">
+            <label for="counselor-class">Class:</label>
+            <input type="text" id="counselor-class">
             <label for="counselor-course">Course:</label>
+            <select id="counselor-department">
+                <option value="">--Select Department--</option>
+                <option value="computer-science">Computer Science</option>
+                <option value="mathematics">Mathematics</option>
+                <option value="engineering">Engineering</option>
+            </select>
             <select id="counselor-course">
                 <option value="">--Select Course--</option>
                 <option value="course1">Course 1</option>
@@ -211,6 +280,7 @@ function showUserTypeFields() {
                 <option value="course3">Course 3</option>
             </select>
         `;
+        loadCourses("counselor-course");
     }
 }
 
@@ -266,6 +336,8 @@ function submitUser(action) {
         data.id = document.getElementById("counselor-id")?.value?.trim();
         data.name = document.getElementById("counselor-name")?.value?.trim();
         data.course = document.getElementById("counselor-course")?.value;
+        data.department = document.getElementById("counselor-department")?.value;
+        data.class = document.getElementById("counselor-class").value
     } else {
         alert("Invalid user type selected.");
         return;
@@ -336,7 +408,7 @@ function deleteUser() {
 
     fetch(`/api/users/delete`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
         body: JSON.stringify({ identifier: userIdOrName })
     })
         .then(response => response.json())
@@ -350,133 +422,164 @@ function deleteUser() {
         .catch(error => console.error("Error deleting user:", error));
 }
 
-function deleteCourse() {
-    const courseId = document.getElementById("delete-course-id").value;
+// Function to submit the course (add or modify)
+function submitCourse(action) {
+    const data = {}; // Data to send
+    let isValid = true;
 
+    if (action === "add") {
+        // Collect course data for adding
+        data.courseId = document.getElementById("course-id")?.value?.trim();
+        data.courseName = document.getElementById("course-name")?.value?.trim();
+        data.semester = document.getElementById("course-semester")?.value?.trim();
+        data.teacherId = document.getElementById("course-teacher")?.value;
+
+        // Validate the input
+        if (!data.courseId || !data.courseName || !data.semester || !data.teacherId) {
+            alert("All fields (Course ID, Course Name, Semester, Teacher) are required!");
+            isValid = false;
+        }
+
+        // Ensure Course ID is required and valid
+        if (!data.courseId) {
+            alert("Course ID is required!");
+            isValid = false;
+        }
+        if (isNaN(data.courseId) || !Number.isInteger(parseFloat(data.courseId))) {
+            alert("Course ID must be a valid integer!");
+            isValid = false;
+        }
+
+        // Ensure Course Name is required
+        if (!data.courseName) {
+            alert("Course Name is required!");
+            isValid = false;
+        }
+
+        // Ensure Semester is required and valid
+        if (!data.semester) {
+            alert("Semester is required!");
+            isValid = false;
+        }
+        if (isNaN(data.semester) || !Number.isInteger(parseFloat(data.semester))) {
+            alert("Semester must be a valid integer!");
+            isValid = false;
+        }
+    } else if (action === "modify") {
+        // Collect data for modifying a course
+        const searchCourseId = document.getElementById("search-course-id")?.value?.trim();
+        if (!searchCourseId) {
+            alert("Please enter the Course ID to search!");
+            isValid = false;
+        }
+
+        // Optionally, collect modify fields here after searching the course
+        data.courseId = searchCourseId;
+    } else if (action === "delete") {
+        // Collect course ID for deletion
+        data.courseId = document.getElementById("delete-course-id")?.value?.trim();
+        if (!data.courseId) {
+            alert("Please enter the Course ID to delete!");
+            isValid = false;
+        }
+
+        // Validate that the Course ID is an integer
+        if (isNaN(data.courseId) || !Number.isInteger(parseFloat(data.courseId))) {
+            alert("Course ID must be a valid integer!");
+            isValid = false;
+        }
+    }
+
+    if (!isValid) {
+        return; // Stop the function if validation fails
+    }
+
+    console.log("Submitting course data:", data);
+
+    // API endpoint based on action (add/modify/delete)
+    let endpoint;
+    if (action === "add") {
+        endpoint = "/api/courses/add";
+    } else if (action === "modify") {
+        endpoint = "/api/courses/modify";
+    } else if (action === "delete") {
+        endpoint = "/api/courses/delete";
+    }
+
+    // Send the request to the API endpoint
+    fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+        body: JSON.stringify(data)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(result => {
+            alert(`Course operation successful!`);
+            console.log("Server response:", result);
+        })
+        .catch(error => {
+            console.error("Error submitting course data:", error);
+            alert("Failed to perform the operation. Please try again.");
+        });
+}
+
+// Function to search a course (for modifying it)
+function searchCourse() {
+    const courseId = document.getElementById("search-course-id")?.value?.trim();
     if (!courseId) {
-        alert("Please enter a course ID to delete.");
+        alert("Please enter a valid Course ID!");
         return;
     }
 
-    fetch(`/api/courses/delete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: courseId })
-    })
+    fetch(`/api/courses/${courseId}`) // Replace with your actual endpoint
         .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("Course deleted successfully!");
+        .then(course => {
+            if (course) {
+                // Populate the form fields with the course details
+                document.getElementById("modify-course-fields").innerHTML = `
+                    <label for="course-name">Course Name:</label>
+                    <input type="text" id="course-name" value="${course.name}">
+                    <label for="course-semester">Semester:</label>
+                    <input type="text" id="course-semester" value="${course.semester}">
+                    <label for="course-teacher">Teacher:</label>
+                    <select id="course-teacher">
+                        ${course.teachers.map(teacher => `<option value="${teacher.id}">${teacher.name}</option>`).join("")}
+                    </select>
+                `;
             } else {
-                alert("Error: " + result.message);
+                alert("Course not found!");
             }
         })
-        .catch(error => console.error("Error deleting course:", error));
+        .catch(error => console.error("Error searching course:", error));
 }
 
-function addUser() {
-    const userType = document.getElementById("user-type").value;
-
-    if (!userType) {
-        alert("Please select a user type.");
+// Function to delete a course
+function deleteCourse() {
+    const courseId = document.getElementById("delete-course-id")?.value?.trim();
+    if (!courseId) {
+        alert("Please enter the Course ID to delete!");
         return;
     }
 
-    let userData = {};
-
-    if (userType === "student") {
-        userData = {
-            type: "student",
-            id: document.getElementById("student-id").value,
-            name: document.getElementById("student-name").value,
-            gender: document.getElementById("student-gender").value,
-            birthdate: document.getElementById("student-birthdate").value,
-            class: document.getElementById("student-class").value,
-            major: document.getElementById("student-major").value
-        };
-    } else if (userType === "teacher") {
-        userData = {
-            type: "teacher",
-            id: document.getElementById("teacher-id").value,
-            name: document.getElementById("teacher-name").value,
-            gender: document.getElementById("teacher-gender").value,
-            department: document.getElementById("teacher-department").value,
-            phone: document.getElementById("teacher-phone").value,
-            email: document.getElementById("teacher-email").value
-        };
-    } else if (userType === "admin") {
-        userData = {
-            type: "admin",
-            id: document.getElementById("admin-id").value,
-            name: document.getElementById("admin-name").value
-        };
-    } else if (userType === "counselor") {
-        userData = {
-            type: "counselor",
-            id: document.getElementById("counselor-id").value,
-            name: document.getElementById("counselor-name").value,
-            course: document.getElementById("counselor-course").value
-        };
-    } else {
-        alert("Invalid user type selected.");
-        return;
-    }
-
-    // Validate collected data
-    if (!userData.id || !userData.name) {
-        alert("ID and Name are required fields.");
-        return;
-    }
-
-    // Submit data to server
-    fetch("/api/users/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData)
+    fetch(`/api/courses/delete/${courseId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() }
     })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("User added successfully!");
-                document.getElementById("user-form-container").innerHTML = ""; // Clear form
-            } else {
-                alert("Error: " + result.message);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Failed to delete course. Status: ${response.status}`);
             }
+            alert("Course deleted successfully!");
         })
-        .catch(error => console.error("Error adding user:", error));
-}
-
-function addCourse() {
-    // Collect course data from input fields
-    const courseData = {
-        id: document.getElementById("course-id").value,
-        name: document.getElementById("course-name").value,
-        semester: document.getElementById("course-semester").value,
-        teacherId: document.getElementById("course-teacher").value
-    };
-
-    // Validate collected data
-    if (!courseData.id || !courseData.name || !courseData.semester || !courseData.teacherId) {
-        alert("All fields are required.");
-        return;
-    }
-
-    // Submit course data to the server
-    fetch("/api/courses/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(courseData)
-    })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("Course added successfully!");
-                document.getElementById("course-form-container").innerHTML = ""; // Clear form
-            } else {
-                alert("Error: " + result.message);
-            }
-        })
-        .catch(error => console.error("Error adding course:", error));
+        .catch(error => {
+            console.error("Error deleting course:", error);
+            alert("Failed to delete course. Please try again.");
+        });
 }
 
 function logout() {
@@ -484,25 +587,5 @@ function logout() {
     location.reload();
 }
 
-
-function loadCourses() {
-    fetch('/get-courses/')
-        .then(response => response.json())
-        .then(data => {
-            const selectElement = document.getElementById("course-selection");
-            // Очистить предыдущие опции
-            selectElement.innerHTML = '<option value="">--Select a course--</option>';
-
-            // Добавить новые опции
-            data.courses.forEach(course => {
-                const option = document.createElement("option");
-                option.value = course.id;
-                option.textContent = course.name;
-                selectElement.appendChild(option);
-            });
-        })
-        .catch(error => console.error('Error loading courses:', error));
-}
-
 // Загрузить курсы при загрузке страницы
-window.onload = loadCourses;
+window.onload = () => loadCourses("course-selection");

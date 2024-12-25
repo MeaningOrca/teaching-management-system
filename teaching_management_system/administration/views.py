@@ -1,7 +1,7 @@
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
-from .tools import save_to_db
+from .tools import save_to_db, get_user_object
 
 def add_user(request):
     data = {
@@ -18,3 +18,17 @@ def add_user(request):
     if response == "OK":
         return JsonResponse({"message": "Request details", "data": response})
     return JsonResponse({"error": response}, status=400)
+
+def search_user(request):
+    data = request.GET.dict()
+    user = get_user_object(data["user_type"], data["user_id"])
+
+    data = json.dumps({"name": user.student_name})
+    return JsonResponse({"message": "Request details", "data": json.loads(data)})
+
+
+def delete_user(request):
+    # data = json.loads(request.body.decode("UTF-8"))
+    # user = get_user_object("student", data["identifier"])
+    # user.delete()
+    return JsonResponse({"success": "200"}, status=200)

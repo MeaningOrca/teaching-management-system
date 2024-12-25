@@ -57,3 +57,10 @@ def save_to_db(user_object):
     except Exception as e:
         return f"An error occurred: {str(e)}"
     return "OK"
+
+def get_user_object(user_type, user_id):
+    match user_type:
+        case "student":
+            from students.models import Student
+            return Student.objects.get(student_id=user_id)
+
