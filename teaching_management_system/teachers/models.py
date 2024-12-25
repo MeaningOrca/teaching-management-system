@@ -1,5 +1,8 @@
 from django.db import models
+from rest_framework import serializers
 from teaching_management_system.consts import GENDER_CHOICES
+
+
 # TODO: gender choices
 
 
@@ -12,3 +15,9 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.teacher_name
+
+
+class TeacherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Teacher
+        fields = '__all__'

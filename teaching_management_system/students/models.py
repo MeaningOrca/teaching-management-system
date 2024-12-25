@@ -1,4 +1,5 @@
 from django.db import models
+from rest_framework import serializers
 from teaching_management_system.consts import GENDER_CHOICES
 
 
@@ -12,3 +13,9 @@ class Student(models.Model):
 
     def __str__(self):
         return self.student_name
+
+
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = '__all__'

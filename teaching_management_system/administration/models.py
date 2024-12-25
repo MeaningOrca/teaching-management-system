@@ -1,4 +1,5 @@
 from django.db import models
+from rest_framework import serializers
 
 
 class Admin(models.Model):
@@ -34,3 +35,15 @@ class Report(models.Model):
 
     def __str__(self):
         return f"Report {self.report_id}"
+
+
+class AdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Admin
+        fields = '__all__'
+
+
+class CounselorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Counselor
+        fields = '__all__'

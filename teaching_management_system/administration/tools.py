@@ -1,8 +1,8 @@
 import json
 
-from students.models import Student
-from teachers.models import Teacher
-from administration.models import Counselor, Admin
+from students.models import Student, StudentSerializer
+from teachers.models import Teacher, TeacherSerializer
+from administration.models import Counselor, Admin, CounselorSerializer, AdminSerializer
 
 
 def save_to_db(user_object):
@@ -46,9 +46,9 @@ def save_to_db(user_object):
             case "admin":
                 # Create and save an Admin object
                 admin = Admin(
-                    admin_id=data["adminID"],
-                    ad_name=data["adName"],
-                    role=data["role"]
+                    admin_id=data["id"],
+                    admin_name=data["name"],
+                    # role=data["role"]
                 )
                 admin.save()
                 print("Admin saved successfully:", admin)
@@ -58,9 +58,27 @@ def save_to_db(user_object):
         return f"An error occurred: {str(e)}"
     return "OK"
 
-def get_user_object(user_type, user_id):
-    match user_type:
-        case "student":
-            from students.models import Student
-            return Student.objects.get(student_id=user_id)
+def get_users_object(user_id):
+    users = dict()
 
+    try:
+        users["student"] = StudentSerializer(Student.objects.get(student_id=user_id)).data
+    except Student.DoesNotExist:
+        print("No students found!")
+
+    try:
+        users["teacher"] = TeacherSerializer(Teacher.objects.get(teacher_id=user_id)).data
+    except Teacher.DoesNotExist:
+        print("No teachers found!")
+
+    try:
+        users["counselor"] = CounselorSerializer(Counselor.objects.get(counselor_id=user_id)).data
+    except Counselor.DoesNotExist:
+        print("No counselor found!")
+
+    try:
+        users["admin"] = AdminSerializer(Admin.objects.get(admin_id=user_id)).data
+    except Admin.DoesNotExist:
+        print("No admin found!")
+
+    return users

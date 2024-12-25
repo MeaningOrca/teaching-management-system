@@ -45,7 +45,6 @@ async function searchUser() {
     const baseUrl = "http://localhost:8000/api/users/search";
     const params = {
         user_id: document.getElementById("search-user-id").value,
-        user_type: "student" // TODO: 完成
     };
 
     // Create a URL object
@@ -69,6 +68,7 @@ async function searchUser() {
 }
 
 function populateModifyUserFields(user) {
+    console.log(user)
     const modifyFields = document.getElementById("modify-user-fields");
     modifyFields.innerHTML = `
         <label for="modify-user-name">Name:</label>
