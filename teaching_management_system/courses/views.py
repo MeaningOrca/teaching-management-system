@@ -5,3 +5,6 @@ def get_courses(request):
     courses = Course.objects.all()
     course_list = [{"id": course.course_id, "name": course.course_name} for course in courses]
     return JsonResponse({"courses": course_list})
+
+def add_courses(request):
+    pass

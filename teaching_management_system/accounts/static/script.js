@@ -7,6 +7,7 @@ function showSection(sectionId) {
     document.getElementById(sectionId).style.display = 'block';
 }
 
+
 // Logout function (simple demo, replace with actual functionality)
 function logout() {
     document.getElementById('student-page').style.display = 'none';
@@ -208,8 +209,9 @@ function fetchTeachers() {
         .then(response => response.json())
         .then(data => {
             teacherSelect.innerHTML = data
-                .map(teacher => `<option value="${teacher.id}">${teacher.name}</option>`)
+                .map(teacher => `<option value="${teacher.teacher_id}">${teacher.teacher_name}</option>`)
                 .join("");
+            console.log(data);
         })
         .catch(error => console.error("Error fetching teachers:", error));
 }
@@ -344,76 +346,60 @@ function deleteCourse() {
         .catch(error => console.error("Error deleting course:", error));
 }
 
-function addUser() {
+function submitUser(action) {
+    const data = {}; // Collect user data dynamically
     const userType = document.getElementById("user-type").value;
 
-    if (!userType) {
-        alert("Please select a user type.");
-        return;
-    }
-
-    let userData = {};
+    data.type = userType;
 
     if (userType === "student") {
-        userData = {
-            type: "student",
-            id: document.getElementById("student-id").value,
-            name: document.getElementById("student-name").value,
-            gender: document.getElementById("student-gender").value,
-            birthdate: document.getElementById("student-birthdate").value,
-            class: document.getElementById("student-class").value,
-            major: document.getElementById("student-major").value
-        };
+        data.id = document.getElementById("student-id").value;
+        data.name = document.getElementById("student-name").value;
+        data.gender = document.getElementById("student-gender").value;
+        data.birthdate = document.getElementById("student-birthdate").value;
+        data.class = document.getElementById("student-class").value;
+        data.major = document.getElementById("student-major").value;
     } else if (userType === "teacher") {
-        userData = {
-            type: "teacher",
-            id: document.getElementById("teacher-id").value,
-            name: document.getElementById("teacher-name").value,
-            gender: document.getElementById("teacher-gender").value,
-            department: document.getElementById("teacher-department").value,
-            phone: document.getElementById("teacher-phone").value,
-            email: document.getElementById("teacher-email").value
-        };
+        data.id = document.getElementById("teacher-id").value;
+        data.name = document.getElementById("teacher-name").value;
+        data.gender = document.getElementById("teacher-gender").value;
+        data.department = document.getElementById("teacher-department").value;
+        data.phone = document.getElementById("teacher-phone").value;
+        data.email = document.getElementById("teacher-email").value;
     } else if (userType === "admin") {
-        userData = {
-            type: "admin",
-            id: document.getElementById("admin-id").value,
-            name: document.getElementById("admin-name").value
-        };
+        data.id = document.getElementById("admin-id").value;
+        data.name = document.getElementById("admin-name").value;
     } else if (userType === "counselor") {
-        userData = {
-            type: "counselor",
-            id: document.getElementById("counselor-id").value,
-            name: document.getElementById("counselor-name").value,
-            course: document.getElementById("counselor-course").value
-        };
-    } else {
-        alert("Invalid user type selected.");
-        return;
+        data.id = document.getElementById("counselor-id").value;
+        data.name = document.getElementById("counselor-name").value;
+        data.course = document.getElementById("counselor-course").value;
     }
 
-    // Validate collected data
-    if (!userData.id || !userData.name) {
-        alert("ID and Name are required fields.");
-        return;
-    }
+    console.log(data); // Log the collected data for debugging
 
-    // Submit data to server
-    fetch("/api/users/add", {
+    // Determine the API endpoint based on the action
+    const endpoint = action === "add" ? "/api/users/add" : "/api/users/modify";
+
+    // Submit the data to the server using the Fetch API
+    fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData)
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+        body: JSON.stringify(data)
     })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("User added successfully!");
-                document.getElementById("user-form-container").innerHTML = ""; // Clear form
-            } else {
-                alert("Error: " + result.message);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
+            return response.json();
         })
-        .catch(error => console.error("Error adding user:", error));
+        .then(result => {
+            alert("User operation successful!");
+            console.log("Server response:", result);
+        })
+        .catch(error => {
+            console.error("Error submitting user data:", error);
+            alert("Failed to perform the operation. Please try again.");
+        });
 }
 
 function addCourse() {
