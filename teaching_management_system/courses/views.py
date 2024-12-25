@@ -7,4 +7,4 @@ def get_courses(request):
     return JsonResponse({"courses": course_list})
 
 def add_courses(request):
-    pass
+    print(request.body.decode("utf-8"))

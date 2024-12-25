@@ -420,7 +420,7 @@ function addCourse() {
     // Submit course data to the server
     fetch("/api/courses/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
         body: JSON.stringify(courseData)
     })
         .then(response => response.json())
