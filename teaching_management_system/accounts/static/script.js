@@ -162,7 +162,12 @@ function showUserTypeFields() {
             <label for="student-class">Class:</label>
             <input type="text" id="student-class">
             <label for="student-major">Major:</label>
-            <input type="text" id="student-major">
+            <select id="student-major">
+                <option value="">--Select Major--</option>
+                <option value="computer-science">Computer Science</option>
+                <option value="engineering">Engineering</option>
+                <option value="mathematics">Mathematics</option>
+            </select>
         `;
     } else if (userType === "teacher") {
         userFields.innerHTML = `
@@ -176,11 +181,14 @@ function showUserTypeFields() {
                 <option value="f">Female</option>
             </select>
             <label for="teacher-department">Department:</label>
-            <input type="text" id="teacher-department">
-            <label for="teacher-phone">Phone Number:</label>
-            <input type="text" id="teacher-phone">
-            <label for="teacher-email">Email:</label>
-            <input type="text" id="teacher-email">
+            <select id="teacher-department">
+                <option value="">--Select Department--</option>
+                <option value="computer-science">Computer Science</option>
+                <option value="mathematics">Mathematics</option>
+                <option value="engineering">Engineering</option>
+            </select>
+            <label for="teacher-contact">Contact:</label>
+            <input type="text" id="teacher-contact">
         `;
     } else if (userType === "admin") {
         userFields.innerHTML = `
@@ -196,7 +204,12 @@ function showUserTypeFields() {
             <label for="counselor-name">Name:</label>
             <input type="text" id="counselor-name">
             <label for="counselor-course">Course:</label>
-            <input type="text" id="counselor-course">
+            <select id="counselor-course">
+                <option value="">--Select Course--</option>
+                <option value="course1">Course 1</option>
+                <option value="course2">Course 2</option>
+                <option value="course3">Course 3</option>
+            </select>
         `;
     }
 }
@@ -214,32 +227,61 @@ function fetchTeachers() {
         .catch(error => console.error("Error fetching teachers:", error));
 }
 
-// Submit user data to the API
 function submitUser(action) {
     const data = {}; // Collect user data dynamically
     const userType = document.getElementById("user-type").value;
+
+    data.type = userType;
+
+    let isValid = true; 
 
     if (userType === "student") {
         data.id = document.getElementById("student-id").value;
         data.name = document.getElementById("student-name").value;
         data.gender = document.getElementById("student-gender").value;
-        data.birthdate = document.getElementById("student-birthdate").value;
+
+        const birthdateInput = document.getElementById("student-birthdate").value;
+        if (birthdateInput) {
+            const formattedDate = formatDateToYYYYMMDD(birthdateInput);
+            if (!formattedDate) {
+                alert("Invalid date format. Please use yyyy-mm-dd.");
+                isValid = false;
+            } else {
+                data.birthdate = formattedDate;
+            }
+        }
+
         data.class = document.getElementById("student-class").value;
-        data.major = document.getElementById("student-major").value;
+        data.major = document.getElementById("student-major").value; // Major from the select
     } else if (userType === "teacher") {
         data.id = document.getElementById("teacher-id").value;
         data.name = document.getElementById("teacher-name").value;
         data.gender = document.getElementById("teacher-gender").value;
-        data.department = document.getElementById("teacher-department").value;
-        data.phone = document.getElementById("teacher-phone").value;
-        data.email = document.getElementById("teacher-email").value;
+        data.department = document.getElementById("teacher-department").value; // Department from the select
+        data.contact = document.getElementById("teacher-contact").value;
     } else if (userType === "admin") {
         data.id = document.getElementById("admin-id").value;
         data.name = document.getElementById("admin-name").value;
     } else if (userType === "counselor") {
         data.id = document.getElementById("counselor-id").value;
         data.name = document.getElementById("counselor-name").value;
-        data.course = document.getElementById("counselor-course").value;
+        data.course = document.getElementById("counselor-course").value; // Course from the select
+    }
+
+    // Validate that id and name are not empty and the ID is an integer
+    if (!data.id || !data.name) {
+        alert("Both ID and Name are required!");
+        isValid = false; // Set the flag to false if validation fails
+    }
+
+    // Validate that the ID is a valid integer
+    if (isNaN(data.id) || !Number.isInteger(parseFloat(data.id))) {
+        alert("ID must be a valid integer!");
+        isValid = false;
+    }
+
+    if (!isValid) {
+        return; // Stop function execution if validation fails
     }
 
     console.log(data); // Log the collected data for debugging
@@ -253,47 +295,32 @@ function submitUser(action) {
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
         body: JSON.stringify(data)
     })
-        .then(response => {
+        .then((response) => {
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             return response.json();
         })
-        .then(result => {
+        .then((result) => {
             alert("User operation successful!");
             console.log("Server response:", result);
         })
-        .catch(error => {
+        .catch((error) => {
             console.error("Error submitting user data:", error);
             alert("Failed to perform the operation. Please try again.");
         });
 }
 
-
-// Placeholder for other operations
-function submitCourse(action) {
-    const data = {
-        id: document.getElementById("course-id").value,
-        name: document.getElementById("course-name").value,
-        semester: document.getElementById("course-semester").value,
-        teacherId: document.getElementById("course-teacher").value
-    };
-
-    const endpoint = action === "add" ? "/api/courses/add" : "/api/courses/modify";
-    fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("Course operation successful!");
-            } else {
-                alert("Error: " + result.message);
-            }
-        })
-        .catch(error => console.error("Error submitting course data:", error));
+// Helper function to format the date to yyyy-mm-dd
+function formatDateToYYYYMMDD(inputDate) {
+    const date = new Date(inputDate);
+    if (isNaN(date.getTime())) {
+        return null; // Invalid date
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
 
 function deleteUser() {
