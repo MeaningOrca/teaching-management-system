@@ -133,6 +133,7 @@
         <button onclick="showUserForm('delete')">Delete User</button>
 
         <div id="user-form-container" style="margin-top: 20px;">
+            {% csrf_token %}
             <!-- Dynamic content for user management actions will appear here -->
         </div>
     </section>
