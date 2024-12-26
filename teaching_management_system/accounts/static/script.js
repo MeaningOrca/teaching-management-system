@@ -47,23 +47,255 @@ async function searchUser() {
         user_id: document.getElementById("search-user-id").value,
     };
 
-    // Create a URL object
     const url = new URL(baseUrl);
-
-    // Append GET parameters
     Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, value));
 
     try {
         const response = await fetch(url.toString());
         if (response.ok) {
             const result = await response.json();
-            populateModifyUserFields(result);
+            console.log("API Response:", result);  // Log the response to inspect the data
+            displayResultsAsTable(result);
         } else {
             const error = await response.json();
             alert('Failed to find user: ' + error.message);
         }
     } catch (error) {
         alert('Error connecting to server: ' + error.message);
+    }
+}
+
+
+function displayResultsAsTable(data) {
+    const tableContainer = document.getElementById("table-container");
+
+    if (!tableContainer) {
+        console.error("Error: table-container not found.");
+        return;
+    }
+
+    // Clear any existing table content
+    tableContainer.innerHTML = "";
+
+    // Create table and header row
+    const table = document.createElement("table");
+    table.setAttribute("border", "1");
+    const header = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+
+    // Add table headers
+    const headers = [
+        "User Type", "ID", "Name", "Gender", "Birthday", "Class/Department", "Contact", "Actions"
+    ];
+    headers.forEach(headerText => {
+        const th = document.createElement("th");
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+    });
+    header.appendChild(headerRow);
+    table.appendChild(header);
+
+    // Create a body section for the table
+    const tbody = document.createElement("tbody");
+
+    // Process the response and display each user type (admin, counselor, student, teacher)
+    const userTypes = ["admin", "counselor", "student", "teacher"];
+
+    userTypes.forEach(userType => {
+        if (data[userType]) {
+            const user = data[userType];
+
+            const row = document.createElement("tr");
+
+            // Add user type column
+            const userTypeCell = document.createElement("td");
+            userTypeCell.textContent = capitalizeFirstLetter(userType);
+            row.appendChild(userTypeCell);
+
+            // Add ID column
+            const idCell = document.createElement("td");
+            idCell.textContent = user[`${userType}_id`] || "N/A";
+            row.appendChild(idCell);
+
+            // Add Name column
+            const nameCell = document.createElement("td");
+            nameCell.textContent = user[`${userType}_name`] || "N/A";
+            row.appendChild(nameCell);
+
+            // Add Gender column (only for student and teacher)
+            const genderCell = document.createElement("td");
+            genderCell.textContent = user.gender || "N/A";
+            row.appendChild(genderCell);
+
+            // Add Birthday column (only for student)
+            const birthdayCell = document.createElement("td");
+            birthdayCell.textContent = user.birthday || "N/A";
+            row.appendChild(birthdayCell);
+
+            // Add Class/Department column
+            const classDeptCell = document.createElement("td");
+            classDeptCell.textContent = user.class_assigned || user.department || "N/A";
+            row.appendChild(classDeptCell);
+
+            // Add Contact column (only for teacher)
+            const contactCell = document.createElement("td");
+            contactCell.textContent = user.contact || "N/A";
+            row.appendChild(contactCell);
+
+            // Add Edit/Delete actions
+            const actionsCell = document.createElement("td");
+            const editButton = document.createElement("button");
+            editButton.textContent = "Edit";
+            editButton.onclick = function() { editUser(user, userType); };  // Pass user and userType
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.onclick = function() { deleteUser(user, userType); };  // Pass user and userType
+
+            actionsCell.appendChild(editButton);
+            actionsCell.appendChild(deleteButton);
+            row.appendChild(actionsCell);
+
+            tbody.appendChild(row);
+        }
+    });
+
+    // Append body and table to the container
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+}
+
+
+// Helper function to capitalize first letter of user type
+function capitalizeFirstLetter(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+
+function editUser(user, userType) {
+    // You can create a modal or use a form to allow the user to edit
+    const formContainer = document.getElementById("edit-form-container");
+
+    if (!formContainer) {
+        console.error("Form container not found.");
+        return;
+    }
+
+    // Clear any existing content
+    formContainer.innerHTML = "";
+
+    // Create the form
+    const form = document.createElement("form");
+
+    // Generate form fields based on the user type
+    const userFields = {
+        student: ["student_name", "gender", "birthday", "class_assigned", "department"],
+        teacher: ["teacher_name", "gender", "contact", "department"],
+        counselor: ["counselor_name", "department", "class_assigned", "course"],
+        admin: ["admin_name"]
+    };
+
+    // Create form elements for all fields
+    userFields[userType].forEach(field => {
+        const label = document.createElement("label");
+        label.textContent = field.replace(/_/g, " ").toUpperCase() + ":";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.id = field;
+        input.value = user[field] || "";  // Allow null or empty field to be edited
+        form.appendChild(label);
+        form.appendChild(input);
+        form.appendChild(document.createElement("br"));
+    });
+
+    // Add Save Button
+    const saveButton = document.createElement("button");
+    saveButton.textContent = "Save Changes";
+    saveButton.type = "button";
+    saveButton.onclick = function() {
+        saveUserChanges(user, userType);  // Pass user and userType
+    };
+    form.appendChild(saveButton);
+
+    // Append form to the container
+    formContainer.appendChild(form);
+}
+
+function saveUserChanges(user, userType) {
+    // Get the updated values from the form
+    const updatedData = {};
+    const userFields = {
+        student: ["student_name", "gender", "birthday", "class_assigned", "department"],
+        teacher: ["teacher_name", "gender", "contact", "department"],
+        counselor: ["counselor_name", "department", "class_assigned", "course"],
+        admin: ["admin_name"]
+    };
+
+    // Retrieve updated data from form fields
+    userFields[userType].forEach(field => {
+        updatedData[field] = document.getElementById(field).value || null;  // Set null if empty
+    });
+
+    // Send updated data to the server (use PUT method for update)
+    const url = `http://localhost:8000/api/users/update/${user[`${userType}_id`]}`;
+    fetch(url, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedData),
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert("User updated successfully");
+        searchUser();  // Re-fetch the data after saving changes
+    })
+    .catch(error => {
+        console.error("Error updating user:", error);
+    });
+}
+
+async function deleteUser(user) {
+    // Prompt for the user type (this works without needing an HTML element)
+    const userType = prompt("Please enter the user type (admin, student, teacher, counselor) to delete:").toLowerCase();
+
+    // Check if the user provided a valid user type
+    const validUserTypes = ["admin", "student", "teacher", "counselor"];
+    if (!validUserTypes.includes(userType)) {
+        alert("Invalid user type. Please enter a valid user type.");
+        return;
+    }
+
+    // Dynamically get the user ID based on the type
+    const userId = user[`${userType}_id`];  // Make sure `user` object has `${userType}_id`
+
+    if (!userId) {
+        alert("User ID not found.");
+        return;
+    }
+
+    const url = `http://localhost:8000/api/users/delete/${userId}`;
+
+    // Confirm the delete action
+    const confirmDelete = confirm(`Are you sure you want to delete this ${userType}?`);
+    if (!confirmDelete) return;
+
+    try {
+        const response = await fetch(url, { method: "DELETE",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            alert(`${capitalizeFirstLetter(userType)} deleted successfully!`);
+            searchUser();  // Re-fetch the list of users after deletion
+        } else {
+            const error = await response.json();
+            alert(`Failed to delete user: ${error.message}`);
+        }
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("An error occurred while deleting the user.");
     }
 }
 
@@ -123,6 +355,7 @@ function showSection(sectionId) {
     const sections = document.querySelectorAll(".section");
     sections.forEach(section => (section.style.display = "none"));
     document.getElementById(sectionId).style.display = "block";
+
 }
 
 // Function to display user management forms
@@ -143,6 +376,16 @@ function showUserForm(action) {
             </select>
             <div id="user-fields"></div>
             <button onclick="submitUser('add')">Submit</button>
+        `;
+    } else if (action === "modify") {
+        container.innerHTML = `
+            <h4>Modify User</h4>
+            <label for="search-user-id">Search by ID/Name:</label>
+            <input type="text" id="search-user-id">
+            <button onclick="searchUser()">Search</button>
+            <div id="table-container"></div>
+            <div id="edit-form-container"></div>
+            <div id="modify-user-fields"></div>
         `;
     } else if (action === "modify") {
         container.innerHTML = `
@@ -177,6 +420,8 @@ function showCourseForm(action) {
             <input type="text" id="course-name">
             <label for="course-semester">Semester:</label>
             <input type="text" id="course-semester">
+            <label for="course-credits">Credits:</label>
+            <input type="text" id="course-credit">
             <label for="course-teacher">Select Teacher:</label>
             <select id="course-teacher"></select>
             <button onclick="submitCourse('add')">Submit</button>
@@ -398,30 +643,6 @@ function formatDateToYYYYMMDD(inputDate) {
     return `${year}-${month}-${day}`;
 }
 
-function deleteUser() {
-    const userIdOrName = document.getElementById("delete-user-id").value;
-
-    if (!userIdOrName) {
-        alert("Please enter a user ID or name to delete.");
-        return;
-    }
-
-    fetch(`/api/users/delete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
-        body: JSON.stringify({ identifier: userIdOrName })
-    })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("User deleted successfully!");
-            } else {
-                alert("Error: " + result.message);
-            }
-        })
-        .catch(error => console.error("Error deleting user:", error));
-}
-
 // Function to submit the course (add or modify)
 function submitCourse(action) {
     const data = {}; // Data to send
@@ -433,6 +654,7 @@ function submitCourse(action) {
         data.courseName = document.getElementById("course-name")?.value?.trim();
         data.semester = document.getElementById("course-semester")?.value?.trim();
         data.teacherId = document.getElementById("course-teacher")?.value;
+        data.credits = document.getElementById("course-credit")?.value;
 
         // Validate the input
         if (!data.courseId || !data.courseName || !data.semester || !data.teacherId) {
@@ -587,5 +809,60 @@ function logout() {
     location.reload();
 }
 
+// Function to format date in yyyy-mm-dd
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const yyyy = date.getFullYear();
+    let mm = date.getMonth() + 1; // Months are zero-indexed
+    let dd = date.getDate();
+
+    // Format month and day to always be two digits
+    if (mm < 10) mm = "0" + mm;
+    if (dd < 10) dd = "0" + dd;
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Function to submit the report data to the server
+async function createReport(reportData) {
+    const url = "http://localhost:8000/api/teachers/reports/add";  // API endpoint to create a report
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCSRFToken()
+            },
+            body: JSON.stringify(reportData),
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            displayFeedback("Report submitted successfully!", "success");
+            console.log("Report Created:", result);
+            document.getElementById("report-form").reset();  // Reset the form
+        } else {
+            const error = await response.json();
+            displayFeedback(`Failed to submit report: ${error.message}`, "error");
+        }
+    } catch (error) {
+        displayFeedback(`Error submitting report: ${error.message}`, "error");
+    }
+}
+
+// Function to display feedback messages
+function displayFeedback(message, type) {
+    const feedbackMessageElement = document.getElementById("feedback-message");
+    feedbackMessageElement.textContent = message;
+    feedbackMessageElement.style.color = type === "error" ? "red" : "green";
+    feedbackMessageElement.style.fontWeight = "bold";
+}
+
 // Загрузить курсы при загрузке страницы
-window.onload = () => loadCourses("course-selection");
+window.onload = () => {
+    loadCourses("course-selection");
+    loadCourses("cancel-course-selection");
+    loadCourses("manage-grade-course");
+    loadCourses("report-course");
+}

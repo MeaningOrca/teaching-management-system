@@ -26,8 +26,10 @@ def search_user(request):
     return JsonResponse(users)
 
 
-def delete_user(request):
+def delete_user(request, id):
+    # May be add select to make it easier not 2 requests same time
     # data = json.loads(request.body.decode("UTF-8"))
     # user = get_user_object("student", data["identifier"])
     # user.delete()
+    print(id)
     return JsonResponse({"success": "200"}, status=200)

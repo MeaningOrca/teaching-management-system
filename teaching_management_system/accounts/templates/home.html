@@ -86,32 +86,135 @@
         </section>
         <section id="teacher-add-reports" class="section" style="display: none;">
             <h3>Add Report</h3>
-            <form>
+            <form id="report-form">
+                <!-- Select Course Dropdown -->
                 <label for="report-course">Select Course:</label>
-                <select id="report-course">
+                <select id="report-course" required>
                     <option value="">--Select a course--</option>
                 </select>
+                
+                <!-- Student ID/Name Input -->
                 <label for="report-student-id">Student ID/Name:</label>
-                <input type="text" id="report-student-id">
+                <input type="text" id="report-student-id" required>
+        
+                <!-- Counselor ID Input -->
+                <label for="report-counselor-id">Counselor ID:</label>
+                <input type="text" id="report-counselor-id" required>
+        
+                <!-- Report Date -->
+                <label for="report-date">Report Date (yyyy-mm-dd):</label>
+                <input type="date" id="report-date" required>
+        
+                <!-- Report Role -->
+                <label for="report-roler">Report Role (Teacher/Counselor):</label>
+                <input type="text" id="report-roler" required>
+        
+                <!-- Reason for Report -->
+                <label for="report-reason">Reason for Report:</label>
+                <textarea id="report-reason" rows="3" required></textarea>
+        
+                <!-- Report Status -->
+                <label for="report-status">Report Status:</label>
+                <select id="report-status" required>
+                    <option value="">--Select status--</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+        
+                <!-- Report Text -->
                 <label for="teacher-report">Report:</label>
-                <textarea id="teacher-report" rows="5"></textarea>
-                <button type="button">Submit Report</button>
+                <textarea id="teacher-report" rows="5" required></textarea>
+        
+                <!-- Submit Button -->
+                <button type="submit">Submit Report</button>
             </form>
+
+            <script>
+                // Handle form submission
+document.getElementById("report-form").addEventListener("submit", function(event) {
+    event.preventDefault();  // Prevent the form from reloading the page
+
+    // Collect the form data
+    const reportData = {
+        courseID: document.getElementById("report-course").value,
+        studentID: document.getElementById("report-student-id").value,
+        counselorID: document.getElementById("report-counselor-id").value,
+        reportDate: formatDate(document.getElementById("report-date").value), // Format the date
+        reportRoler: document.getElementById("report-roler").value,
+        reason: document.getElementById("report-reason").value,
+        reportStatus: document.getElementById("report-status").value,
+        reportText: document.getElementById("teacher-report").value
+    };
+
+    // Validation checks
+    if (!reportData.courseID || !reportData.studentID || !reportData.counselorID || !reportData.reportDate || !reportData.reportRoler || !reportData.reason || !reportData.reportStatus || !reportData.reportText) {
+        displayFeedback("All fields are required!", "error");
+        return;
+    }
+
+    // Submit the report
+    createReport(reportData);
+});
+            </script>
+            <!-- Feedback message will be shown here -->
+            <div id="feedback-message" style="margin-top: 20px;"></div>
         </section>
+            
+              
         <section id="teacher-analyze-grades" class="section" style="display: none;">
             <h3>Statistics Analysis</h3>
             <canvas id="teacher-statistics-chart"></canvas>
         </section>
         <section id="teacher-contact-info" class="section" style="display: none;">
             <h3>Update Contact Information</h3>
-            <form>
-                <label for="teacher-email">Email:</label>
-                <input type="email" id="teacher-email">
-                <label for="teacher-phone">Phone Number:</label>
-                <input type="tel" id="teacher-phone">
-                <button type="button">Update</button>
+            <form id="contact-info-form">
+                <label for="teacher-contact">Contact:</label>
+                <input type="text" id="teacher-contact" placeholder="Enter new contact info">
+                
+                <button type="button" id="update-contact-btn">Update</button>
             </form>
         </section>
+        <script>
+            document.getElementById("update-contact-btn").addEventListener("click", function(event) {
+    event.preventDefault(); // Prevents the form from being submitted in the default way
+
+    // Gather the data from the form
+    const contactData = {
+        contact: document.getElementById("teacher-contact").value
+    };
+
+    // Check if the required field is filled
+    if (!contactData.contact) {
+        alert("Please enter the new contact information.");
+        return;
+    }
+
+    // Send the updated contact info to the server
+    fetch("http://localhost:8000/api/teachers/update", {
+        method: "PUT", // Using PUT to update the resource
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken() // Optional: Include CSRF token if needed
+        },
+        body: JSON.stringify(contactData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert("Contact information updated successfully!");
+            // Optionally, reset the form
+            document.getElementById("contact-info-form").reset();
+        } else {
+            alert("Failed to update contact information: " + result.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error updating contact information:", error);
+        alert("An error occurred while updating contact information. Please try again.");
+    });
+});
+        </script>
     </div>
 
     <!-- Admin Page -->
