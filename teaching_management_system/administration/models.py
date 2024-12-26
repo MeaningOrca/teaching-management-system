@@ -29,6 +29,7 @@ class Report(models.Model):
     reason = models.CharField(max_length=255, blank=True)
     report_role = models.CharField(max_length=50)
     report_status = models.CharField(max_length=50)
+    report_text = models.TextField(blank=True)
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name="reports")
     counselor = models.ForeignKey(Counselor, on_delete=models.CASCADE, related_name="reports")
     teacher = models.ForeignKey('teachers.Teacher', on_delete=models.CASCADE, related_name="reports")

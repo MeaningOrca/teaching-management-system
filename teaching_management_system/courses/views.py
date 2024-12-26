@@ -24,3 +24,6 @@ def add_courses(request):
         print(e)
         return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"message": "success"})
+
+def submit_grades(request):
+    pass
