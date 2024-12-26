@@ -62,28 +62,302 @@
         <nav>
             <button onclick="showSection('teacher-view-courses')">Check Courses</button>
             <button onclick="showSection('teacher-manage-grades')">Manage Scores</button>
-            <button onclick="showSection('teacher-analyze-grades')">Statistics Analysis</button>
+            <button onclick="showSection('teacher-static-analyze')">Statistics Analysis</button>
             <button onclick="showSection('teacher-add-reports')">Add Report</button>
             <button onclick="showSection('teacher-contact-info')">Update Contact Info</button>
         </nav>
         <section id="teacher-view-courses" class="section" style="display: none;">
             <h3>Check Courses</h3>
-            <ul id="teacher-courses-list"></ul>
-        </section>
-        <section id="teacher-manage-grades" class="section" style="display: none;">
-            <h3>Manage Scores</h3>
-            <form>
-                <label for="manage-grade-course">Select Course:</label>
-                <select id="manage-grade-course">
-                    <option value="">--Select a course--</option>
-                </select>
-                <label for="student-id-name">Student ID/Name:</label>
-                <input type="text" id="student-id-name">
-                <label for="student-grade">Enter Grade:</label>
-                <input type="text" id="student-grade">
-                <button type="button">Submit Grade</button>
-            </form>
-        </section>
+        
+            <!-- Dropdown to select course -->
+            <label for="course-id">Select Course:</label>
+            <select id="course-id">
+                <option value="">-- Select a Course --</option>
+                <!-- List of courses will be populated here -->
+            </select>
+        
+            <!-- Button to check course -->
+            <button id="check-course-btn" type="button" onclick="showStudentsInCourse()">Check Course</button>
+        
+            <!-- Message when there are no students in the selected course -->
+            <p id="no-students-message" style="color: red; display: none;">
+                There are no students in this course.
+            </p>
+        
+            <!-- Placeholder to show the students list -->
+            <table id="students-list" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Student data will be inserted here -->
+                </tbody>
+            </table>
+        </section>        
+
+        <script>
+             
+            // Function to show students in the selected course
+            function showStudentsInCourse() {
+                const courseId = document.getElementById('course-id').value;
+
+                if (!courseId) {
+                    alert('Please select a course');
+                    return;
+                }
+
+                // Fetch the students of the selected course
+                fetch(`/get-students-in-course/${courseId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const studentsList = document.getElementById('students-list');
+                        const tbody = studentsList.querySelector('tbody');
+                        const noStudentsMessage = document.getElementById('no-students-message'); // Add the element to show the "No students" message
+
+                        tbody.innerHTML = ''; // Clear previous list
+                        noStudentsMessage.style.display = 'none'; // Hide the "No students" message initially
+
+                        if (data.students.length === 0) {
+                            // If no students are found, show the "No students in this course" message
+                            noStudentsMessage.style.display = 'block';
+                            studentsList.style.display = 'none'; // Hide the table
+                        } else {
+                            // Populate students list
+                            data.students.forEach(student => {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td>${student.id}</td>
+                                    <td>${student.name}</td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+
+                            // Show the students table
+                            studentsList.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading students:', error);
+                        alert('Error loading students');
+                    });
+            }
+
+            // Load courses when the page loads
+            document.addEventListener('DOMContentLoaded', function() {
+                loadCourses(); // Load courses into the select element
+            });
+
+        </script>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Manage Scores</title>
+        </head>
+        <body>
+        
+            <section id="teacher-manage-grades" class="section" style="display: none;">
+                <h3>Manage Scores</h3>
+                <form id="grade-form">
+                    <!-- Select Course Dropdown -->
+                    <label for="manage-grade-course">Select Course:</label>
+                    <select id="manage-grade-course" required>
+                        <option value="">--Select a course--</option>
+                    </select>
+                    
+                    <!-- Student ID Input -->
+                    <label for="student-id">Student ID:</label>
+                    <input type="text" id="student-id" required>
+                    
+                    <!-- Student Grade Input -->
+                    <label for="student-grade">Enter Grade:</label>
+                    <input type="text" id="student-grade" required>
+                    
+                    <!-- Submit Button -->
+                    <button type="button" id="submit-grade-btn">Submit Grade</button>
+                </form>
+        
+                <!-- Feedback message will be shown here -->
+                <div id="feedback-message" style="margin-top: 20px;"></div>
+            </section>
+        
+            <script>
+                
+                // Event listener for the Submit Grade button
+                document.getElementById("submit-grade-btn").addEventListener("click", function(event) {
+                    event.preventDefault();  // Prevent default form submission behavior
+        
+                    // Collect the form data
+                    const courseID = document.getElementById("manage-grade-course").value;
+                    const studentID = document.getElementById("student-id").value;
+                    const grade = document.getElementById("student-grade").value;
+        
+                    // Validation: Check if any field is empty
+                    if (!courseID || !studentID || !grade) {
+                        displayFeedback("All fields are required!", "error");
+                        return;
+                    }
+        
+                    // Validate grade to ensure it's a valid number
+                    if (isNaN(grade) || grade < 0 || grade > 100) {
+                        displayFeedback("Please enter a valid grade between 0 and 100.", "error");
+                        return;
+                    }
+        
+                    // Prepare the data to send to the server
+                    const gradeData = {
+                        courseID: courseID,
+                        studentID: studentID,
+                        grade: parseFloat(grade)  // Ensure grade is a number
+                    };
+        
+                    // Call function to submit the grade
+                    submitGrade(gradeData);
+                });
+        
+                // Function to submit the grade to the server
+                async function submitGrade(gradeData) {
+                    const url = "http://localhost:8000/api/grades/submit";  // Adjust this URL to your server's endpoint
+        
+                    try {
+                        const response = await fetch(url, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify(gradeData),
+                        });
+        
+                        if (response.ok) {
+                            const result = await response.json();
+                            displayFeedback("Grade submitted successfully!", "success");
+                            console.log("Grade Submitted:", result);
+                            document.getElementById("grade-form").reset();  // Reset the form after submission
+                        } else {
+                            const error = await response.json();
+                            displayFeedback(`Failed to submit grade: ${error.message}`, "error");
+                        }
+                    } catch (error) {
+                        displayFeedback(`Error submitting grade: ${error.message}`, "error");
+                    }
+                }
+        
+                // Function to display feedback messages
+                function displayFeedback(message, type) {
+                    const feedbackMessageElement = document.getElementById("feedback-message");
+                    feedbackMessageElement.textContent = message;
+                    feedbackMessageElement.style.color = type === "error" ? "red" : "green";
+                    feedbackMessageElement.style.fontWeight = "bold";
+                }
+        
+                // Fetch courses to populate the course dropdown (if needed)
+                async function fetchCourses() {
+                    try {
+                        const response = await fetch("http://localhost:8000/api/courses");  // Adjust the URL as needed
+                        const courses = await response.json();
+        
+                        const courseSelect = document.getElementById("manage-grade-course");
+        
+                        courses.forEach(course => {
+                            const option = document.createElement("option");
+                            option.value = course.courseID;
+                            option.textContent = course.courseName;
+                            courseSelect.appendChild(option);
+                        });
+                    } catch (error) {
+                        console.error("Error fetching courses:", error);
+                    }
+                }
+        
+                // Call fetchCourses when the page loads to populate the course dropdown
+                fetchCourses();
+            </script>
+        
+        </body>
+        </html>        
+        
+        <section id="teacher-static-analyze" class="section" style="display: none;">
+            <h3>Static Analysis</h3>
+        
+            <!-- Dropdown to select a course -->
+            <label for="analyze-course-id">Select Course:</label>
+            <select id="analyze-course-id">
+                <option value="">-- Select a Course --</option>
+                <!-- Courses will be dynamically populated here -->
+            </select>
+        
+            <!-- Button to fetch analysis -->
+            <button id="analyze-course-btn">Show Analysis</button>
+        
+            <!-- Placeholder for analysis results -->
+            <table id="analyze-students-list">
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Student Name</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Student data will be inserted here -->
+                </tbody>
+            </table>
+        
+            <!-- Placeholder for "No students" message -->
+            <p id="analyze-no-students" style="display: none;">There are no students in this course.</p>
+        </section>      
+        <script>          
+// Function to load courses into the dropdown
+function loadCoursesForAnalyze() {
+    loadCourses("analyze-course-id"); // Reuse the `loadCourses` function
+}
+
+// Function to fetch students and scores for a specific course
+function fetchStudentsForAnalysis() {
+    const courseId = document.getElementById("analyze-course-id").value;
+    const tableBody = document.getElementById("analyze-students-list").querySelector("tbody");
+    const noStudentsMessage = document.getElementById("analyze-no-students");
+
+    // Clear the table and hide the "no students" message
+    tableBody.innerHTML = "";
+    noStudentsMessage.style.display = "none";
+
+    if (!courseId) {
+        alert("Please select a course.");
+        return;
+    }
+
+    // Fetch the student list with scores
+    fetch(`/get-students-scores/${courseId}/`)
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.students.length === 0) {
+                noStudentsMessage.style.display = "block"; // Show "no students" message
+            } else {
+                data.students.forEach((student) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>${student.id}</td>
+                        <td>${student.name}</td>
+                        <td>${student.score}</td>
+                    `;
+                    tableBody.appendChild(row); // Append student row to table
+                });
+            }
+        })
+        .catch((error) => console.error("Error fetching analysis data:", error));
+}
+
+// Add event listener to the button
+document.getElementById("analyze-course-btn").addEventListener("click", fetchStudentsForAnalysis);
+
+// Load courses on page load
+loadCoursesForAnalyze();
+        </script>  
         <section id="teacher-add-reports" class="section" style="display: none;">
             <h3>Add Report</h3>
             <form id="report-form">
@@ -132,6 +406,44 @@
 
             <script>
                 // Handle form submission
+document.getElementById("check-course-btn").addEventListener("click", function() {
+    const courseId = document.getElementById("course-id").value;
+
+    // Make sure a course is selected
+    if (!courseId) {
+        alert("Please select a course first.");
+        return;
+    }
+
+    // Fetch the list of students enrolled in the selected course
+    fetch(`/api/courses/${courseId}/students/`)  // Your API endpoint
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch students");
+            }
+            return response.json();
+        })
+        .then(students => {
+            // Clear the table before adding new data
+            const tbody = document.getElementById("students-list").getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+
+            // Add rows to the table for each student
+            students.forEach(student => {
+                const row = tbody.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                cell1.textContent = student.id;
+                cell2.textContent = student.name;
+            });
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Error fetching students: " + error.message);
+        });
+});
+
+
 document.getElementById("report-form").addEventListener("submit", function(event) {
     event.preventDefault();  // Prevent the form from reloading the page
 

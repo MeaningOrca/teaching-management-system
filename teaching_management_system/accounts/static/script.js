@@ -196,6 +196,18 @@ function editUser(user, userType) {
 
     // Create form elements for all fields
     userFields[userType].forEach(field => {
+        if (field === "course") {
+            const label = document.createElement("label");
+            label.textContent = field.replace(/_/g, " ").toUpperCase() + ":";
+            const input = document.createElement("select");
+//            input.type = "text";
+            input.id = "course";
+//            input.value = user[field] || "";  // Allow null or empty field to be edited
+            form.appendChild(label);
+            form.appendChild(input);
+            form.appendChild(document.createElement("br"));
+            loadCourses("course")
+        } else {
         const label = document.createElement("label");
         label.textContent = field.replace(/_/g, " ").toUpperCase() + ":";
         const input = document.createElement("input");
@@ -204,7 +216,7 @@ function editUser(user, userType) {
         input.value = user[field] || "";  // Allow null or empty field to be edited
         form.appendChild(label);
         form.appendChild(input);
-        form.appendChild(document.createElement("br"));
+        form.appendChild(document.createElement("br"));}
     });
 
     // Add Save Button
@@ -236,11 +248,12 @@ function saveUserChanges(user, userType) {
     });
 
     // Send updated data to the server (use PUT method for update)
-    const url = `http://localhost:8000/api/users/update/${user[`${userType}_id`]}`;
+    const url = `http://localhost:8000/api/users/update/${user[`${userType}_id`]}/${userType}`;
     fetch(url, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken()
         },
         body: JSON.stringify(updatedData),
     })
@@ -273,7 +286,7 @@ async function deleteUser(user) {
         return;
     }
 
-    const url = `http://localhost:8000/api/users/delete/${userId}`;
+    const url = `http://localhost:8000/api/users/delete/${userId}/${userType}`;
 
     // Confirm the delete action
     const confirmDelete = confirm(`Are you sure you want to delete this ${userType}?`);
@@ -687,7 +700,8 @@ function submitCourse(action) {
             alert("Semester must be a valid integer!");
             isValid = false;
         }
-    } else if (action === "modify") {
+    }
+    else if (action === "modify") {
         // Collect data for modifying a course
         const searchCourseId = document.getElementById("search-course-id")?.value?.trim();
         if (!searchCourseId) {
@@ -697,7 +711,11 @@ function submitCourse(action) {
 
         // Optionally, collect modify fields here after searching the course
         data.courseId = searchCourseId;
-    } else if (action === "delete") {
+        data.courseName = document.getElementById("course-name").value
+        data.semester = document.getElementById("course-semester").value
+        data.teacher = document.getElementById("course-teacher").value
+    }
+    else if (action === "delete") {
         // Collect course ID for deletion
         data.courseId = document.getElementById("delete-course-id")?.value?.trim();
         if (!data.courseId) {
@@ -758,7 +776,7 @@ function searchCourse() {
         return;
     }
 
-    fetch(`/api/courses/${courseId}`) // Replace with your actual endpoint
+    fetch(`http://localhost:8000/api/courses/${courseId}`) // Replace with your actual endpoint
         .then(response => response.json())
         .then(course => {
             if (course) {
@@ -865,4 +883,68 @@ window.onload = () => {
     loadCourses("cancel-course-selection");
     loadCourses("manage-grade-course");
     loadCourses("report-course");
+                // Handle form submission
+document.getElementById("report-form").addEventListener("submit", function(event) {
+    event.preventDefault();  // Prevent the form from reloading the page
+
+    // Collect the form data
+    const reportData = {
+        courseID: document.getElementById("report-course").value,
+        studentID: document.getElementById("report-student-id").value,
+        counselorID: document.getElementById("report-counselor-id").value,
+        reportDate: formatDate(document.getElementById("report-date").value), // Format the date
+        reportRoler: document.getElementById("report-roler").value,
+        reason: document.getElementById("report-reason").value,
+        reportStatus: document.getElementById("report-status").value,
+        reportText: document.getElementById("teacher-report").value
+    };
+
+    // Validation checks
+    if (!reportData.courseID || !reportData.studentID || !reportData.counselorID || !reportData.reportDate || !reportData.reportRoler || !reportData.reason || !reportData.reportStatus || !reportData.reportText) {
+        displayFeedback("All fields are required!", "error");
+        return;
+    }
+
+    // Submit the report
+    createReport(reportData);
+});
+
+            document.getElementById("update-contact-btn").addEventListener("click", function(event) {
+    event.preventDefault(); // Prevents the form from being submitted in the default way
+
+    // Gather the data from the form
+    const contactData = {
+        contact: document.getElementById("teacher-contact").value
+    };
+
+    // Check if the required field is filled
+    if (!contactData.contact) {
+        alert("Please enter the new contact information.");
+        return;
+    }
+
+    // Send the updated contact info to the server
+    fetch("http://localhost:8000/api/teachers/update", {
+        method: "PUT", // Using PUT to update the resource
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken() // Optional: Include CSRF token if needed
+        },
+        body: JSON.stringify(contactData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert("Contact information updated successfully!");
+            // Optionally, reset the form
+            document.getElementById("contact-info-form").reset();
+        } else {
+            alert("Failed to update contact information: " + result.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error updating contact information:", error);
+        alert("An error occurred while updating contact information. Please try again.");
+    });
+});
 }
