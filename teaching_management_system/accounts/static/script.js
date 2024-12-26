@@ -877,12 +877,293 @@ function displayFeedback(message, type) {
     feedbackMessageElement.style.fontWeight = "bold";
 }
 
+function loadEnrolledCourses(elementID) {
+    fetch('http://localhost:8000/api/get-enrolled-courses')
+        .then(response => response.json())
+        .then(data => {
+            const selectElement = document.getElementById(elementID);
+
+            // Clear previous options
+            selectElement.innerHTML = '<option value="">-- Select a Course --</option>';
+
+            // Check if the user is enrolled in any courses
+            if (data.courses.length === 0) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "No courses available to cancel.";
+                selectElement.appendChild(option);
+                selectElement.disabled = true; // Disable dropdown
+                return;
+            }
+
+            // Add courses to the dropdown
+            data.courses.forEach(course => {
+                const option = document.createElement("option");
+                option.value = course.id;
+                option.textContent = course.name;
+                selectElement.appendChild(option);
+            });
+
+            selectElement.disabled = false; // Enable dropdown if there are courses
+        })
+        .catch(error => {
+            console.error('Error loading courses:', error);
+            alert('Error loading courses');
+        });}
+
+
+
+            // Function to show students in the selected course
+            function showStudentsInCourse() {
+                const courseId = document.getElementById('course-id').value;
+
+                if (!courseId) {
+                    alert('Please select a course');
+                    return;
+                }
+
+                // Fetch the students of the selected course
+                fetch(`http://localhost:8000/get-students-in-course/${courseId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const studentsList = document.getElementById('students-list');
+                        const tbody = studentsList.querySelector('tbody');
+                        const noStudentsMessage = document.getElementById('no-students-message'); // Add the element to show the "No students" message
+
+                        tbody.innerHTML = ''; // Clear previous list
+                        noStudentsMessage.style.display = 'none'; // Hide the "No students" message initially
+
+                        if (data.students.length === 0) {
+                            // If no students are found, show the "No students in this course" message
+                            noStudentsMessage.style.display = 'block';
+                            studentsList.style.display = 'none'; // Hide the table
+                        } else {
+                            // Populate students list
+                            data.students.forEach(student => {
+                                const tr = document.createElement('tr');
+                                tr.innerHTML = `
+                                    <td>${student.id}</td>
+                                    <td>${student.name}</td>
+                                `;
+                                tbody.appendChild(tr);
+                            });
+
+                            // Show the students table
+                            studentsList.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading students:', error);
+                        alert('Error loading students');
+                    });
+            }
+
+
+// Function to submit the grade to the server
+                async function submitGrade(gradeData) {
+                    const url = "http://localhost:8000/api/grades/submit";  // Adjust this URL to your server's endpoint
+
+                    try {
+                        const response = await fetch(url, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": getCSRFToken()
+                            },
+                            body: JSON.stringify(gradeData),
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            displayFeedback("Grade submitted successfully!", "success");
+                            console.log("Grade Submitted:", result);
+                            document.getElementById("grade-form").reset();  // Reset the form after submission
+                        } else {
+                            const error = await response.json();
+                            displayFeedback(`Failed to submit grade: ${error.message}`, "error");
+                        }
+                    } catch (error) {
+                        displayFeedback(`Error submitting grade: ${error.message}`, "error");
+                    }
+                }
+
+function loadStudentGrades() {
+        fetch('/api/get-student-grades/')
+            .then(response => response.json())
+            .then(data => {
+                const coursesList = document.getElementById("student-courses-list");
+                coursesList.innerHTML = ""; // Clear previous list
+
+                // Add courses and grades to the list
+                data.courses.forEach(course => {
+                    const listItem = document.createElement("li");
+
+                    // If the grade is less than 60, display in red
+                    const gradeColor = course.score < 60 ? 'red' : 'black';
+                    listItem.innerHTML = `${course.course_name}: <span style="color: ${gradeColor};">${course.score}</span>`;
+                    coursesList.appendChild(listItem);
+                });
+
+                // Call function to display grade analysis chart
+                renderGradeAnalysisChart(data.courses);
+            })
+            .catch(error => {
+                console.error('Error loading student grades:', error);
+            });
+    }
+
+    // Function to render the grade analysis chart
+    function renderGradeAnalysisChart(courses) {
+        const ctx = document.getElementById('student-grade-chart').getContext('2d');
+
+        const labels = courses.map(course => course.course_name);
+        const scores = courses.map(course => course.score);
+
+        // Create the grade chart
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Grades',
+                    data: scores,
+                    backgroundColor: scores.map(score => score < 60 ? 'rgba(255, 99, 132, 0.2)' : 'rgba(75, 192, 192, 0.2)'),
+                    borderColor: scores.map(score => score < 60 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+
+
+
 // Загрузить курсы при загрузке страницы
 window.onload = () => {
     loadCourses("course-selection");
-    loadCourses("cancel-course-selection");
+//    loadCourses("cancel-course-selection");
     loadCourses("manage-grade-course");
     loadCourses("report-course");
+    loadCourses("course-id");
+    loadCourses("manage-grade-course");
+    loadCourses("analyze-course-id");
+
+        loadEnrolledCourses("cancel-course-selection");
+        loadStudentGrades();
+
+    // Handle cancel course button click
+    document.getElementById("cancel-course-btn").addEventListener("click", () => {
+        const selectedCourse = document.getElementById("cancel-course-selection").value;
+        const selectedCourseName = document.getElementById("cancel-course-selection").selectedOptions[0]?.textContent;
+        const messageElement = document.getElementById("cancel-course-message");
+
+        if (!selectedCourse) {
+            messageElement.textContent = "Please select a course to cancel.";
+            messageElement.style.color = "red";
+            messageElement.style.display = "block";
+            return;
+        }
+
+        // Confirm with the user before sending the cancellation request
+        const confirmCancel = confirm(`Are you sure you want to cancel the course "${selectedCourseName}"?`);
+        if (!confirmCancel) {
+            messageElement.textContent = "Course cancellation cancelled.";
+            messageElement.style.color = "orange";
+            messageElement.style.display = "block";
+            return;
+        }
+
+        // Send cancellation request to the server
+        fetch('/api/enrollment/cancel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken() // Ensure this function retrieves the CSRF token
+            },
+            body: JSON.stringify({ course_id: selectedCourse })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Display the server's response
+                if (data.success) {
+                    messageElement.textContent = data.message || "Course cancelled successfully!";
+                    messageElement.style.color = "green";
+
+                    // Reload enrolled courses dropdown
+                    loadEnrolledCourses("cancel-course-selection");
+                }
+                else {
+                    messageElement.textContent = data.message || "Failed to cancel course.";
+                    messageElement.style.color = "red";
+                }
+                messageElement.style.display = "block";
+            })
+            .catch(error => {
+                console.error('Error cancelling course:', error);
+                messageElement.textContent = "An error occurred. Please try again.";
+                messageElement.style.color = "red";
+                messageElement.style.display = "block";
+            });
+    });
+
+    document.getElementById("add-course-btn").addEventListener("click", () => {
+        const selectedCourse = document.getElementById("course-selection").value;
+        const selectedCourseName = document.getElementById("course-selection").selectedOptions[0]?.textContent;
+        const messageElement = document.getElementById("course-message");
+
+        if (!selectedCourse) {
+            messageElement.textContent = "Please select a course before adding.";
+            messageElement.style.color = "red";
+            messageElement.style.display = "block";
+            return;
+        }
+
+        // Confirm with the user before sending the data
+        const confirmAdd = confirm(`Are you sure you want to add the course "${selectedCourseName}"?`);
+        if (!confirmAdd) {
+            messageElement.textContent = "Course addition cancelled.";
+            messageElement.style.color = "orange";
+            messageElement.style.display = "block";
+            return;
+        }
+
+        // Send the selected course to the server
+        fetch('api/enrollment/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken() // Ensure this function retrieves the CSRF token
+            },
+            body: JSON.stringify({ course_id: selectedCourse })
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Display the server's response
+                if (data.success) {
+                    messageElement.textContent = data.message || "Course added successfully!";
+                    messageElement.style.color = "green";
+                    loadEnrolledCourses("cancel-course-selection");
+                } else {
+                    messageElement.textContent = data.message || "Failed to add course.";
+                    messageElement.style.color = "red";
+                }
+                messageElement.style.display = "block";
+            })
+            .catch(error => {
+                console.error('Error adding course:', error);
+                messageElement.textContent = "An error occurred. Please try again.";
+                messageElement.style.color = "red";
+                messageElement.style.display = "block";
+            });
+    });
+
                 // Handle form submission
 document.getElementById("report-form").addEventListener("submit", function(event) {
     event.preventDefault();  // Prevent the form from reloading the page

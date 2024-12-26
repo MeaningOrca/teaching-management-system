@@ -17,7 +17,7 @@ class Enrollment(models.Model):
     enrollment_id = models.AutoField(primary_key=True)
     student = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name="enrollments")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments")
-    enrollment_date = models.DateField()
+    enrollment_date = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=50)
 
     def __str__(self):

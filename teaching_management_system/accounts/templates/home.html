@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teaching Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     {% load static %}
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <script src="{% static 'script.js' %}"></script>
@@ -28,8 +30,9 @@
                 <select id="course-selection">
                     <option value="">--Select a course--</option>
                 </select>
-                <button type="button">Add Course</button>
+                <button type="button" id="add-course-btn">Add Course</button>
             </form>
+            <p id="course-message" style="color: green; display: none;"></p>
         </section>
         <section id="student-cancel-courses" class="section" style="display: none;">
             <h3>Cancel Course</h3>
@@ -38,8 +41,9 @@
                 <select id="cancel-course-selection">
                     <option value="">--Select a course--</option>
                 </select>
-                <button type="button">Cancel Course</button>
+                <button type="button" id="cancel-course-btn">Cancel Course</button>
             </form>
+            <p id="cancel-course-message" style="display: none;"></p>
         </section>
         <section id="student-view-grades" class="section" style="display: none;">
             <h3>Course Status & Grade Analysis</h3>
@@ -98,59 +102,6 @@
             </table>
         </section>        
 
-        <script>
-             
-            // Function to show students in the selected course
-            function showStudentsInCourse() {
-                const courseId = document.getElementById('course-id').value;
-
-                if (!courseId) {
-                    alert('Please select a course');
-                    return;
-                }
-
-                // Fetch the students of the selected course
-                fetch(`/get-students-in-course/${courseId}/`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const studentsList = document.getElementById('students-list');
-                        const tbody = studentsList.querySelector('tbody');
-                        const noStudentsMessage = document.getElementById('no-students-message'); // Add the element to show the "No students" message
-
-                        tbody.innerHTML = ''; // Clear previous list
-                        noStudentsMessage.style.display = 'none'; // Hide the "No students" message initially
-
-                        if (data.students.length === 0) {
-                            // If no students are found, show the "No students in this course" message
-                            noStudentsMessage.style.display = 'block';
-                            studentsList.style.display = 'none'; // Hide the table
-                        } else {
-                            // Populate students list
-                            data.students.forEach(student => {
-                                const tr = document.createElement('tr');
-                                tr.innerHTML = `
-                                    <td>${student.id}</td>
-                                    <td>${student.name}</td>
-                                `;
-                                tbody.appendChild(tr);
-                            });
-
-                            // Show the students table
-                            studentsList.style.display = 'block';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading students:', error);
-                        alert('Error loading students');
-                    });
-            }
-
-            // Load courses when the page loads
-            document.addEventListener('DOMContentLoaded', function() {
-                loadCourses(); // Load courses into the select element
-            });
-
-        </script>
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -184,68 +135,41 @@
                 <!-- Feedback message will be shown here -->
                 <div id="feedback-message" style="margin-top: 20px;"></div>
             </section>
-        
+
             <script>
-                
+
                 // Event listener for the Submit Grade button
                 document.getElementById("submit-grade-btn").addEventListener("click", function(event) {
                     event.preventDefault();  // Prevent default form submission behavior
-        
+
                     // Collect the form data
                     const courseID = document.getElementById("manage-grade-course").value;
                     const studentID = document.getElementById("student-id").value;
                     const grade = document.getElementById("student-grade").value;
-        
+
                     // Validation: Check if any field is empty
                     if (!courseID || !studentID || !grade) {
                         displayFeedback("All fields are required!", "error");
                         return;
                     }
-        
+
                     // Validate grade to ensure it's a valid number
                     if (isNaN(grade) || grade < 0 || grade > 100) {
                         displayFeedback("Please enter a valid grade between 0 and 100.", "error");
                         return;
                     }
-        
+
                     // Prepare the data to send to the server
                     const gradeData = {
                         courseID: courseID,
                         studentID: studentID,
                         grade: parseFloat(grade)  // Ensure grade is a number
                     };
-        
+
                     // Call function to submit the grade
                     submitGrade(gradeData);
                 });
-        
-                // Function to submit the grade to the server
-                async function submitGrade(gradeData) {
-                    const url = "http://localhost:8000/api/grades/submit";  // Adjust this URL to your server's endpoint
-        
-                    try {
-                        const response = await fetch(url, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify(gradeData),
-                        });
-        
-                        if (response.ok) {
-                            const result = await response.json();
-                            displayFeedback("Grade submitted successfully!", "success");
-                            console.log("Grade Submitted:", result);
-                            document.getElementById("grade-form").reset();  // Reset the form after submission
-                        } else {
-                            const error = await response.json();
-                            displayFeedback(`Failed to submit grade: ${error.message}`, "error");
-                        }
-                    } catch (error) {
-                        displayFeedback(`Error submitting grade: ${error.message}`, "error");
-                    }
-                }
-        
+
                 // Function to display feedback messages
                 function displayFeedback(message, type) {
                     const feedbackMessageElement = document.getElementById("feedback-message");
@@ -253,15 +177,15 @@
                     feedbackMessageElement.style.color = type === "error" ? "red" : "green";
                     feedbackMessageElement.style.fontWeight = "bold";
                 }
-        
+
                 // Fetch courses to populate the course dropdown (if needed)
                 async function fetchCourses() {
                     try {
                         const response = await fetch("http://localhost:8000/api/courses");  // Adjust the URL as needed
                         const courses = await response.json();
-        
+
                         const courseSelect = document.getElementById("manage-grade-course");
-        
+
                         courses.forEach(course => {
                             const option = document.createElement("option");
                             option.value = course.courseID;
@@ -272,7 +196,7 @@
                         console.error("Error fetching courses:", error);
                     }
                 }
-        
+
                 // Call fetchCourses when the page loads to populate the course dropdown
                 fetchCourses();
             </script>
