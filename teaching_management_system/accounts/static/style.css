@@ -153,3 +153,24 @@ button {
 button:hover {
     background-color: #f0f0f0;
 }
+
+.report-item {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.report-item h4 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.report-item p {
+    margin-bottom: 5px;
+}
+
+.report-item small {
+    font-size: 0.9em;
+    color: #666;
+}

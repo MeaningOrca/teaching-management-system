@@ -234,54 +234,7 @@
             <!-- Placeholder for "No students" message -->
             <p id="analyze-no-students" style="display: none;">There are no students in this course.</p>
         </section>      
-        <script>          
-// Function to load courses into the dropdown
-function loadCoursesForAnalyze() {
-    loadCourses("analyze-course-id"); // Reuse the `loadCourses` function
-}
 
-// Function to fetch students and scores for a specific course
-function fetchStudentsForAnalysis() {
-    const courseId = document.getElementById("analyze-course-id").value;
-    const tableBody = document.getElementById("analyze-students-list").querySelector("tbody");
-    const noStudentsMessage = document.getElementById("analyze-no-students");
-
-    // Clear the table and hide the "no students" message
-    tableBody.innerHTML = "";
-    noStudentsMessage.style.display = "none";
-
-    if (!courseId) {
-        alert("Please select a course.");
-        return;
-    }
-
-    // Fetch the student list with scores
-    fetch(`/get-students-scores/${courseId}/`)
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.students.length === 0) {
-                noStudentsMessage.style.display = "block"; // Show "no students" message
-            } else {
-                data.students.forEach((student) => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td>${student.id}</td>
-                        <td>${student.name}</td>
-                        <td>${student.score}</td>
-                    `;
-                    tableBody.appendChild(row); // Append student row to table
-                });
-            }
-        })
-        .catch((error) => console.error("Error fetching analysis data:", error));
-}
-
-// Add event listener to the button
-document.getElementById("analyze-course-btn").addEventListener("click", fetchStudentsForAnalysis);
-
-// Load courses on page load
-loadCoursesForAnalyze();
-        </script>  
         <section id="teacher-add-reports" class="section" style="display: none;">
             <h3>Add Report</h3>
             <form id="report-form">
@@ -499,7 +452,7 @@ document.getElementById("report-form").addEventListener("submit", function(event
         <nav>
             <button onclick="showSection('counselor-view-students')">View Students</button>
             <button onclick="showSection('counselor-analyze-performance')">Analyze Performance</button>
-            <button onclick="showSection('counselor-schedule-meetings')">Schedule Meetings</button>
+            <button onclick="showSection('counselor-schedule-meetings')">Add report</button>
         </nav>
         <section id="counselor-view-students" class="section" style="display: none;">
             <h3>View Students</h3>
@@ -509,24 +462,142 @@ document.getElementById("report-form").addEventListener("submit", function(event
         </section>
         <section id="counselor-analyze-performance" class="section" style="display: none;">
             <h3>Analyze Student Performance</h3>
-            <label for="student-performance-id">Select Student:</label>
-            <select id="student-performance-id">
-                <option value="">--Select a student--</option>
-            </select>
-            <button type="button">View Analysis</button>
+                        <!-- Input to fetch student data -->
+            <label for="student-performance-id">Student ID:</label>
+            <input type="text" id="student-performance-id" required>
+            <button id="view-performance-btn" type="button">View Analysis</button>
+
+            <!-- Table to show student scores by course -->
+            <table id="counselor-performance-table">
+                <thead>
+                    <tr>
+                        <th>Course Name</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data will be dynamically populated here -->
+                </tbody>
+            </table>
+
+            <!-- Chart for student performance -->
+            <canvas id="counselor-performance-chart"></canvas>
+        </section>
             <canvas id="counselor-performance-chart"></canvas>
         </section>
         <section id="counselor-schedule-meetings" class="section" style="display: none;">
-            <h3>Schedule Meetings</h3>
-            <form>
-                <label for="meeting-student-id">Student ID/Name:</label>
-                <input type="text" id="meeting-student-id" required>
-                <label for="meeting-date">Date:</label>
-                <input type="date" id="meeting-date" required>
-                <label for="meeting-time">Time:</label>
-                <input type="time" id="meeting-time" required>
-                <button type="button">Schedule Meeting</button>
+            <h3>Add Report</h3>
+            <form id="report-form">
+                <!-- Select Course Dropdown -->
+                <label for="report-course">Select Course:</label>
+                <select id="report-course-counselor" required>
+                    <option value="">--Select a course--</option>
+                </select>
+
+                <!-- Student ID/Name Input -->
+                <label for="report-student-id">Student ID/Name:</label>
+                <input type="text" id="report-student-id" required>
+
+                <!-- Counselor ID Input -->
+                <label for="report-counselor-id">Counselor ID:</label>
+                <input type="text" id="report-counselor-id" required>
+
+                <!-- Report Date -->
+                <label for="report-date">Report Date (yyyy-mm-dd):</label>
+                <input type="date" id="report-date" required>
+
+                <!-- Report Role -->
+                <label for="report-roler">Report Role (Teacher/Counselor):</label>
+                <input type="text" id="report-roler" required>
+
+                <!-- Reason for Report -->
+                <label for="report-reason">Reason for Report:</label>
+                <textarea id="report-reason" rows="3" required></textarea>
+
+                <!-- Report Status -->
+                <label for="report-status">Report Status:</label>
+                <select id="report-status" required>
+                    <option value="">--Select status--</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+
+                <!-- Report Text -->
+                <label for="teacher-report">Report:</label>
+                <textarea id="teacher-report" rows="5" required></textarea>
+
+                <!-- Submit Button -->
+                <button type="submit">Submit Report</button>
             </form>
+
+            <script>
+                // Handle form submission
+document.getElementById("check-course-btn").addEventListener("click", function() {
+    const courseId = document.getElementById("course-id").value;
+
+    // Make sure a course is selected
+    if (!courseId) {
+        alert("Please select a course first.");
+        return;
+    }
+
+    // Fetch the list of students enrolled in the selected course
+    fetch(`/api/courses/${courseId}/students/`)  // Your API endpoint
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Failed to fetch students");
+            }
+            return response.json();
+        })
+        .then(students => {
+            // Clear the table before adding new data
+            const tbody = document.getElementById("students-list").getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+
+            // Add rows to the table for each student
+            students.forEach(student => {
+                const row = tbody.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                cell1.textContent = student.id;
+                cell2.textContent = student.name;
+            });
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Error fetching students: " + error.message);
+        });
+});
+
+
+document.getElementById("report-form").addEventListener("submit", function(event) {
+    event.preventDefault();  // Prevent the form from reloading the page
+
+    // Collect the form data
+    const reportData = {
+        courseID: document.getElementById("report-course").value,
+        studentID: document.getElementById("report-student-id").value,
+        counselorID: document.getElementById("report-counselor-id").value,
+        reportDate: formatDate(document.getElementById("report-date").value), // Format the date
+        reportRoler: document.getElementById("report-roler").value,
+        reason: document.getElementById("report-reason").value,
+        reportStatus: document.getElementById("report-status").value,
+        reportText: document.getElementById("teacher-report").value
+    };
+
+    // Validation checks
+    if (!reportData.courseID || !reportData.studentID || !reportData.counselorID || !reportData.reportDate || !reportData.reportRoler || !reportData.reason || !reportData.reportStatus || !reportData.reportText) {
+        displayFeedback("All fields are required!", "error");
+        return;
+    }
+
+    // Submit the report
+    createReport(reportData);
+});
+            </script>
+            <!-- Feedback message will be shown here -->
+            <div id="feedback-message" style="margin-top: 20px;"></div>
         </section>
     </div>
 

@@ -9,9 +9,9 @@ urlpatterns = [
     path('api/courses/modify', views.modify_course, name='modify'),
     path('api/courses/delete/<int:id>', views.delete_course, name='delete'),
     path('get-grades', views.get_grades, name='get_grades'),
-    path('get-students-in-course/<int:id>', views.get_students_in_course, name='get-students-in-course'),
+    path('get-students-in-course/<int:id>/', views.get_students_in_course, name='get-students-in-course'),
     path('api/enrollment/add', views.add_enrollment, name='add_enrollment'),
     path('api/enrollment/cancel', views.cancel_enrollment, name='cancel_enrollment'),
     path('api/get-enrolled-courses', views.get_enrolled_courses, name='get-enrolled-courses'),
-    path('api/get-student-grades/', views.get_student_grades, name='get_student_grades')
+    path('api/get-student-grades/', views.get_student_grades, name='get_student_grades'),
 ]

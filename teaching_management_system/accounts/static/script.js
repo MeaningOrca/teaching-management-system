@@ -369,6 +369,9 @@ function showSection(sectionId) {
     sections.forEach(section => (section.style.display = "none"));
     document.getElementById(sectionId).style.display = "block";
 
+    if (sectionId === "counselor-view-students") {
+        populateStudentsList();
+    }
 }
 
 // Function to display user management forms
@@ -877,6 +880,39 @@ function displayFeedback(message, type) {
     feedbackMessageElement.style.fontWeight = "bold";
 }
 
+function fetchReports() {
+    fetch(`/api/reports`)  // Replace with your API URL
+        .then(response => response.json())
+        .then(reports => {
+            const reportList = document.getElementById('student-report-list');
+            reportList.innerHTML = ''; // Clear the list first
+
+            if (reports.length === 0) {
+                const emptyMessage = document.createElement('li');
+                emptyMessage.textContent = "No reports available.";
+                reportList.appendChild(emptyMessage);
+                return;
+            }
+
+            reports.reports.forEach(report => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('report-item');
+
+                // Structure of each report item
+                listItem.innerHTML = `
+                    <h4>${report.title} (${report.from_user})</h4>
+                    <p>${report.content}</p>
+                    <p><small>Created on: ${new Date(report.created_at).toLocaleString()}</small></p>
+                `;
+
+                reportList.appendChild(listItem);
+            });
+        })
+        .catch(err => {
+            console.error('Error fetching reports:', err);
+        });
+}
+
 function loadEnrolledCourses(elementID) {
     fetch('http://localhost:8000/api/get-enrolled-courses')
         .then(response => response.json())
@@ -908,7 +944,7 @@ function loadEnrolledCourses(elementID) {
         })
         .catch(error => {
             console.error('Error loading courses:', error);
-            alert('Error loading courses');
+//            alert('Error loading courses');
         });}
 
 
@@ -1043,6 +1079,136 @@ function loadStudentGrades() {
         });
     }
 
+    function fetchStudents(courseId) {
+    fetch(`/students/fetch?course_id=${courseId}`) // Replace with your API endpoint for students
+        .then(response => response.json())
+        .then(students => {
+            const studentTableBody = document.querySelector('#analyze-students-list tbody');
+            const noStudentsMessage = document.getElementById('analyze-no-students');
+
+            // Clear previous data
+            studentTableBody.innerHTML = '';
+
+            if (students.length === 0) {
+                noStudentsMessage.style.display = 'block';
+                return;
+            }
+
+            noStudentsMessage.style.display = 'none';
+
+            // Populate student data
+            students.data.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.score}</td>
+                `;
+                studentTableBody.appendChild(row);
+            });
+        })
+        .catch(err => {
+            console.error('Error fetching students:', err);
+        });
+}
+
+// Function to populate the students list
+async function populateStudentsList() {
+    try {
+        const response = await fetch('/students/list'); // Replace with your API endpoint
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const students = await response.json(); // Assuming API returns a JSON array of student objects
+        const listElement = document.getElementById('counselor-students-list');
+
+        // Clear existing content
+        listElement.innerHTML = '';
+
+        // Generate and append list items for each student
+        students.data.forEach(student => {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `
+                <strong>Student ID:</strong> ${student.student_id} <br>
+                <strong>Name:</strong> ${student.student_name} <br>
+                <strong>Gender:</strong> ${student.gender} <br>
+                <strong>Birthday:</strong> ${student.birthday} <br>
+                <strong>Class:</strong> ${student.class_assigned} <br>
+                <strong>Department:</strong> ${student.department}
+            `;
+            listElement.appendChild(listItem);
+        });
+    } catch (error) {
+        console.error('Error fetching student data:', error);
+    }
+}
+
+// Call the function to populate the list
+populateStudentsList();
+
+
+// Function to display student courses and scores in the table
+function displayStudentCourses(data) {
+    const tableBody = document.querySelector("#counselor-performance-table tbody");
+    tableBody.innerHTML = ""; // Clear previous data
+
+    data.forEach(course => {
+        const row = document.createElement("tr");
+
+        const courseNameCell = document.createElement("td");
+        courseNameCell.textContent = course.courseName;
+
+        const scoreCell = document.createElement("td");
+        scoreCell.textContent = course.score;
+
+        // Highlight failed courses
+        if (course.score <= 60) {
+            row.style.color = "red";
+        }
+
+        row.appendChild(courseNameCell);
+        row.appendChild(scoreCell);
+        tableBody.appendChild(row);
+    });
+}
+
+// Function to render student performance chart
+function renderPerformanceChart(data) {
+    const ctx = document.getElementById("counselor-performance-chart").getContext("2d");
+
+    // Extract course names and scores
+    const courseNames = data.map(course => course.courseName);
+    const scores = data.map(course => course.score);
+
+    // Create bar chart
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: courseNames,
+            datasets: [{
+                label: "Course Scores",
+                data: scores,
+                backgroundColor: scores.map(score => score <= 60 ? "red" : "blue"),
+                borderColor: "black",
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
 
 
 // Загрузить курсы при загрузке страницы
@@ -1054,9 +1220,47 @@ window.onload = () => {
     loadCourses("course-id");
     loadCourses("manage-grade-course");
     loadCourses("analyze-course-id");
+    loadCourses("report-course-counselor");
 
         loadEnrolledCourses("cancel-course-selection");
         loadStudentGrades();
+
+     document.querySelector('button[onclick="(\'student-view-reports\')"]').addEventListener('click', function() {
+//        const studentId = 1;  // Replace with actual student ID
+        fetchReports();
+    });
+
+document.getElementById("view-performance-btn").addEventListener("click", function () {
+    const studentId = document.getElementById("student-performance-id").value;
+
+    if (!studentId) {
+        alert("Please enter a Student ID.");
+        return;
+    }
+
+    // Fetch student course data
+    fetch(`/students/courses?studentId=${studentId}`)
+        .then(response => {
+            if (!response.ok) throw new Error("Failed to fetch student data.");
+            return response.json();
+        })
+        .then(data => {
+            displayStudentCourses(data.data);
+            renderPerformanceChart(data.data);
+        })
+        .catch(error => console.error("Error fetching student courses:", error));
+});
+
+
+document.getElementById('analyze-course-btn').addEventListener('click', () => {
+    const courseId = document.getElementById('analyze-course-id').value;
+    if (!courseId) {
+        alert('Please select a course!');
+        return;
+    }
+
+    fetchStudents(courseId);
+});
 
     // Handle cancel course button click
     document.getElementById("cancel-course-btn").addEventListener("click", () => {
@@ -1166,6 +1370,7 @@ window.onload = () => {
 
                 // Handle form submission
 document.getElementById("report-form").addEventListener("submit", function(event) {
+    // TODO: Found the bug createReport calls 2 times
     event.preventDefault();  // Prevent the form from reloading the page
 
     // Collect the form data

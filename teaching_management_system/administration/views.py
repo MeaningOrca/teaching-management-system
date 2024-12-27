@@ -1,6 +1,6 @@
 import json
 from django.http import JsonResponse
-from administration.models import Counselor, Admin
+from .models import Counselor, Admin, Report
 from students.models import Student
 from teachers.models import Teacher
 from courses.models import Course
@@ -80,3 +80,17 @@ def edit_user(request, id, type):
             admin.save()
 
     return JsonResponse({"success": "200"}, status=200)
+
+def get_reports(request):
+    reports = Report.objects.filter(student_id=request.user.user_id)
+    response = {"reports": []}
+
+    for report in reports:
+        response["reports"].append({
+            "title": report.reason,
+            "from_user": report.report_role,
+            "content": report.report_text,
+            "created_at": report.report_date
+        })
+
+    return JsonResponse(response, status=200)

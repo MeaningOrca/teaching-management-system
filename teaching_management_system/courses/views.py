@@ -93,9 +93,13 @@ def delete_course(request, id):
         return HttpResponse(status=500)
 
 def get_students_in_course(request, id):
-    course = Course.objects.get(course_id=id)
-    print(course, course.student.student_id)
-    return HttpResponse(status=500)
+    student_in_course = {"students": []}
+    for i in Enrollment.objects.filter(course_id=id):
+        student_in_course["students"].append({
+            "id": i.student_id,
+            "name": Student.objects.get(student_id=i.student_id).student_name
+        })
+    return JsonResponse(student_in_course)
 
 def add_enrollment(request):
     course_id = json.loads(request.body)["course_id"]
@@ -111,6 +115,7 @@ def add_enrollment(request):
         return HttpResponse(status=500)
 
 def get_enrolled_courses(request):
+    print(request.user)
     enrollment = Enrollment.objects.filter(student_id = request.user.user_id)
     response = {"courses": []}
     for i in enrollment:
