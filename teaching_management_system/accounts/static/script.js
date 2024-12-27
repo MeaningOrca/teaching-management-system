@@ -1145,7 +1145,7 @@ async function populateStudentsList() {
 }
 
 // Call the function to populate the list
-populateStudentsList();
+//populateStudentsList();
 
 
 // Function to display student courses and scores in the table
@@ -1225,7 +1225,7 @@ window.onload = () => {
         loadEnrolledCourses("cancel-course-selection");
         loadStudentGrades();
 
-     document.querySelector('button[onclick="(\'student-view-reports\')"]').addEventListener('click', function() {
+     document.querySelector('button[onclick="showSection(\'student-view-reports\')"]').addEventListener('click', function() {
 //        const studentId = 1;  // Replace with actual student ID
         fetchReports();
     });
